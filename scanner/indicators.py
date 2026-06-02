@@ -33,6 +33,8 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["52w_high"] = df["High"].rolling(window=RS_LOOKBACK).max()
     df["inside_bar"] = (df["High"] < df["High"].shift(1)) & (df["Low"] > df["Low"].shift(1))  # ← ADD THIS
     return df
+
+
 def get_market_sentiment() -> dict:
     """
     Fetch NIFTY SMALLCAP 100 and NIFTY SMALLCAP 250 index data directly from NSE 

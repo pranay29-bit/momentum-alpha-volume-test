@@ -31,28 +31,52 @@ _RATE_LIMIT_BACKOFF = 30.0
 
 
 # ── Symbol list & metadata ─────────────────────────────────────────────────────
+def _map_sym(s: str) -> str:
+    """Translates CSV/TradingView symbols into Yahoo Finance tickers."""
+    s_clean = str(s).strip().upper()
+    
+    # 1. Translate Smallcap 100 (catches CNXSMALLCAP, CNX Small Cap, etc)
+    if "CNX" in s_clean and "SMALL" in s_clean:
+        return "^CNXSC"
+    
+    # 2. Translate Smallcap 250 (catches NIFTYSMLCAP250, Nifty Small Cap 250, etc)
+    if "NIFTY" in s_clean and "250" in s_clean:
+        return "NIFTYSMLCAP250.NS"
+        
+    # 3. Default behavior: append .NS to regular Indian stocks
+    if "." in s_clean or s_clean.startswith("^"):
+        return s_clean
+    return s_clean + EXCHANGE_SUFFIX
+
 
 def load_symbols(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> list[str]:
-    df  = pd.read_csv(csv_path)
-    raw = df[symbol_col].dropna().astype(str).str.strip().unique().tolist()
+    df = pd.read_csv(csv_path)
+    raw = df[symbol_col].dropna().astype(str).unique().tolist()
     
-    processed_symbols = []
-    for s in raw:
-        # 1. Catch the exact strings from your CSV and assign the correct Yahoo Finance tickers
-        if s == "CNX Small cap" or s == "^CNXSC":
-            processed_symbols.append("^CNXSC")
-        elif s == "Nifty Small Cap 250" or s == "NIFTYSMLCAP250.NS":
-            processed_symbols.append("NIFTYSMLCAP250.NS")
-            
-        # 2. Skip appending .NS if it already has a period OR if it's an index starting with ^
-        elif "." in s or s.startswith("^"):
-            processed_symbols.append(s)
-            
-        # 3. Default behavior for regular NSE equity symbols (e.g., RELIANCE -> RELIANCE.NS)
-        else:
-            processed_symbols.append(s + EXCHANGE_SUFFIX)
-            
-    return processed_symbols
+    # Apply our translator to the list of symbols going to the yfinance downloader
+    return [_map_sym(s) for s in raw]
+
+
+def load_symbol_metadata(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> pd.DataFrame:
+    """
+    Return a DataFrame indexed by the Yahoo-suffixed symbol with
+    'industry_group' and 'industry' columns (sourced from NSE_Stocks.csv).
+    """
+    df = pd.read_csv(csv_path)
+    df[symbol_col] = df[symbol_col].dropna().astype(str).str.strip()
+    df = df[df[symbol_col].str.len() > 0].copy()
+    
+    # Apply our exact same translator here so the Market Cap/Industry data maps correctly
+    df["symbol_ns"] = df[symbol_col].apply(_map_sym)
+
+    meta_cols = {"symbol_ns": "symbol_ns"}
+    if "Industry Group" in df.columns:
+        meta_cols["Industry Group"] = "industry_group"
+    if "Industry" in df.columns:
+        meta_cols["Industry"] = "industry"
+
+    meta = df[[c for c in meta_cols]].rename(columns=meta_cols)
+    return meta.drop_duplicates(subset=["symbol_ns"]).set_index("symbol_ns")
 
 
 def load_symbol_metadata(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> pd.DataFrame:

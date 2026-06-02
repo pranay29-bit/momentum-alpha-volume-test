@@ -34,97 +34,94 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["inside_bar"] = (df["High"] < df["High"].shift(1)) & (df["Low"] > df["Low"].shift(1))  # ← ADD THIS
     return df
 
-
 def get_market_sentiment() -> dict:
     """
-    Fetch NIFTY SMALLCAP 100 and NIFTY SMALLCAP 250 index data directly from NSE 
-    using jugaad_data, compute EMA10 / EMA20, and return a sentiment dict.
+    Fetch CNXSMALLCAP and NIFTYSMLCAP250 index data from yfinance,
+    compute EMA10 / EMA20, and return a sentiment dict with red/green signals.
     """
-    from datetime import date, timedelta
-    import pandas as pd
-    from jugaad_data.nse import index_raw
+    import yfinance as yf
 
-    # Exact official index names as required by the NSE website
-    INDICES = {
+    # Multiple fallback tickers per index — Yahoo Finance changes these silently
+    TICKERS = {
         "cnxsmallcap": {
-            "name": "NIFTY SMALLCAP 100",
-            "display_name": "Smallcap 100"
+            "name": "CNX Smallcap",
+            "candidates": ["^CNXSC", "NIFTYSMLCAP250.NS"]
         },
         "niftysmlcap250": {
-            "name": "NIFTY SMALLCAP 250",
-            "display_name": "Smallcap 250"
+            "name": "Nifty Smallcap 250",
+            "candidates": ["^NSMIDCP250", "NIFTYSMLCAP250.NS"],
         },
     }
 
     result: dict = {
         "cnxsmallcap":    {"close": None, "ema10": None, "ema20": None,
-                           "above_ema10": None, "above_ema20": None, "name": "Smallcap 100"},
+                           "above_ema10": None, "above_ema20": None, "name": "CNX Smallcap"},
         "niftysmlcap250": {"close": None, "ema10": None, "ema20": None,
-                           "above_ema10": None, "above_ema20": None, "name": "Smallcap 250"},
+                           "above_ema10": None, "above_ema20": None, "name": "Nifty Smallcap 250"},
         "overall": "unavailable",
     }
 
     ok_count   = 0
     bull_count = 0
 
-    # Fetch the last 90 days of data to safely calculate the 20-day EMA
-    to_date = date.today()
-    from_date = to_date - timedelta(days=90)
+    for key, meta in TICKERS.items():
+        close_series = None
 
-    for key, meta in INDICES.items():
-        try:
-            # 1. Fetch historical index data from the NSE servers
-            raw_data = index_raw(symbol=meta["name"], from_date=from_date, to_date=to_date)
-            
-            if not raw_data:
-                print(f"[Market Sentiment] No data found for {meta['name']} on NSE")
-                continue
+        for ticker in meta["candidates"]:
+            try:
+                raw = yf.download(
+                    ticker, period="60d", interval="1d",
+                    progress=False, auto_adjust=True
+                )
+                if raw.empty or len(raw) < 21:
+                    continue
 
-            df = pd.DataFrame(raw_data)
+                # ── Fix MultiIndex columns (yfinance >= 0.2.38) ──────────────
+                if isinstance(raw.columns, pd.MultiIndex):
+                    raw.columns = raw.columns.get_level_values(0)
 
-            # 2. Extract and format dates and closing prices
-            # (jugaad_data typically returns 'HistoricalDate' and 'CLOSE')
-            date_col = "HistoricalDate" if "HistoricalDate" in df.columns else "Index Date"
-            close_col = "CLOSE" if "CLOSE" in df.columns else "Closing Index Value"
+                close_col = raw["Close"].dropna()
 
-            df[date_col] = pd.to_datetime(df[date_col])
-            
-            # 3. Sort chronologically (oldest to newest) for accurate EMA calculation
-            df = df.sort_values(by=date_col).reset_index(drop=True)
-            close_series = df[close_col].astype(float)
+                # After flattening, if downloading one ticker we may still get
+                # a DataFrame with one column — squeeze to Series
+                if isinstance(close_col, pd.DataFrame):
+                    close_col = close_col.iloc[:, 0]
 
-            if len(close_series) < 21:
-                print(f"[Market Sentiment] Not enough data rows for {meta['name']}")
-                continue
+                if len(close_col) < 21:
+                    continue
 
-            print(f"[Market Sentiment] {meta['name']} OK — {len(close_series)} rows fetched from NSE")
+                close_series = close_col.astype(float)
+                print(f"[Market Sentiment] {ticker} OK — {len(close_series)} rows")
+                break  # got valid data, stop trying fallbacks
 
-            # 4. Calculate EMAs
-            last  = float(close_series.iloc[-1])
-            ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
-            ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
+            except Exception as e:
+                print(f"[Market Sentiment] {ticker} failed: {e}")
 
-            above10 = last > ema10
-            above20 = last > ema20
+        if close_series is None:
+            print(f"[Market Sentiment] All tickers failed for {meta['name']}")
+            continue
 
-            result[key].update({
-                "close":       round(last,  2),
-                "ema10":       round(ema10, 2),
-                "ema20":       round(ema20, 2),
-                "above_ema10": above10,
-                "above_ema20": above20,
-            })
+        last  = float(close_series.iloc[-1])
+        ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
+        ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
 
-            ok_count += 1
-            if above10 and above20:
-                bull_count += 1
-            elif above10 or above20:
-                bull_count += 0.5
+        above10 = last > ema10
+        above20 = last > ema20
 
-        except Exception as e:
-            print(f"[Market Sentiment] {meta['name']} failed: {e}")
+        result[key].update({
+            "close":       round(last,  2),
+            "ema10":       round(ema10, 2),
+            "ema20":       round(ema20, 2),
+            "above_ema10": above10,
+            "above_ema20": above20,
+        })
 
-    # 5. Evaluate overall sentiment based on the index data
+        ok_count += 1
+        if above10 and above20:
+            bull_count += 1
+        elif above10 or above20:
+            bull_count += 0.5
+
     if ok_count == 0:
         result["overall"] = "unavailable"
     elif bull_count >= ok_count * 0.75:

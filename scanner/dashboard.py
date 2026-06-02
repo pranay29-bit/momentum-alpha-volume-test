@@ -45,7 +45,6 @@ def _tv_link(symbol_ns: str) -> str:
     sym = symbol_ns.replace(".NS", "").strip()
     return f"https://www.tradingview.com/chart/?symbol=NSE%3A{sym}"
 
-
 def build_main_index(
     passing_path="passing_dashboard.html",
     elite_path="elite_dashboard.html",
@@ -59,212 +58,226 @@ def build_main_index(
     <head>
         <meta charset="utf-8">
         <title>Momentum Alpha Dashboard</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
         <style>
             body {{
-                font-family: 'Inter', sans-serif;
-                background: #F8FAFC;
-                color: #0F172A;
+                font-family: Arial, sans-serif;
+                background: #0f172a;
+                color: white;
                 padding: 40px;
-                margin: 0;
             }}
 
             h1 {{
                 margin-bottom: 30px;
-                font-weight: 700;
-                letter-spacing: -0.02em;
             }}
 
             .grid {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 24px;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
             }}
 
             .card {{
-                background: #FFFFFF;
-                padding: 30px;
-                border-radius: 16px;
-                border: 1px solid #E2E8F0;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-                transition: transform 0.2s, box-shadow 0.2s;
-            }}
-            
-            .card:hover {{
-                transform: translateY(-2px);
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+                background: #1e293b;
+                padding: 24px;
+                border-radius: 12px;
+                border: 1px solid #334155;
             }}
 
             .card h2 {{
                 margin-top: 0;
-                color: #1E293B;
-                font-size: 1.25rem;
-                font-weight: 600;
-            }}
-            
-            .card p {{
-                color: #64748B;
-                font-size: 0.9rem;
-                margin-bottom: 24px;
+                color: #60a5fa;
             }}
 
             .card a {{
                 display: inline-block;
-                padding: 10px 18px;
-                background: #2563EB;
+                margin-top: 15px;
+                padding: 10px 14px;
+                background: #2563eb;
                 color: white;
                 border-radius: 8px;
                 text-decoration: none;
-                font-weight: 500;
-                font-size: 0.9rem;
-                transition: background 0.2s;
-            }}
-            
-            .card a:hover {{
-                background: #1D4ED8;
             }}
         </style>
     </head>
 
     <body>
-        <h1>Momentum Alpha Scanners</h1>
+
+        <h1>Momentum Alpha Dashboards</h1>
+
         <div class="grid">
+
             <div class="card">
                 <h2>Passing Stocks</h2>
-                <p>Base Minervini 8-condition scan.</p>
                 <a href="{passing_path}">Open Dashboard</a>
             </div>
+
             <div class="card">
                 <h2>Elite EMA10</h2>
-                <p>High momentum + Above 10-period EMA.</p>
                 <a href="{elite_path}">Open Dashboard</a>
             </div>
+
             <div class="card">
                 <h2>Volume Action</h2>
-                <p>Pocket pivots and abnormal volume signatures.</p>
                 <a href="{volume_path}">Open Dashboard</a>
             </div>
+
             <div class="card">
                 <h2>Rocket Stocks</h2>
-                <p>Passing conditions + Inside bar coil.</p>
                 <a href="{rocket_path}">Open Dashboard</a>
             </div>
+
         </div>
+
     </body>
     </html>
     """
+
     Path(out_path).write_text(html, encoding="utf-8")
+
     logger.info("Main index page → %s", out_path)
 
 
 # ── Shared CSS / Chart.js CDN ─────────────────────────────────────────────────
 
 _CDN_CHARTJS = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
-_GOOGLE_FONTS = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+_GOOGLE_FONTS = (
+    "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700"
+    "&family=Playfair+Display:wght@500;600&display=swap"
+)
 
 _BASE_CSS = """
 :root {
-  --bg: #F8FAFC;
-  --surface: #FFFFFF;
-  --border: #E2E8F0;
-  --border2: #CBD5E1;
-  --text: #0F172A;
-  --muted: #64748B;
-  --subtle: #94A3B8;
-  
-  --blue: #2563EB; --blue-bg: #EFF6FF; --blue-mid: #BFDBFE;
-  --teal: #0D9488; --teal-bg: #F0FDFA; --teal-mid: #99F6E4;
-  --amber: #D97706; --amber-bg: #FFFBEB; --amber-mid: #FDE68A;
-  --emerald: #059669; --green-bg: #ECFDF5; --green-mid: #A7F3D0;
-  --red: #DC2626; --red-bg: #FEF2F2; --red-mid: #FECACA;
-  --purple: #7C3AED; --purple-bg: #F5F3FF;
-  
-  --sans: 'Inter', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
-  --r: 8px; --rl: 12px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --bg:#f5f3ef; --surface:#ffffff; --border:#e4e0d8; --border2:#ccc8bf;
+  --text:#1c1917; --muted:#78716c; --subtle:#a8a29e;
+  --blue:#2563eb; --blue-bg:#eff6ff; --blue-mid:#bfdbfe;
+  --teal:#0d9488; --amber:#b45309; --amber-bg:#fffbeb;
+  --green:#15803d; --green-bg:#f0fdf4; --green-mid:#86efac;
+  --emerald:#059669; --red:#dc2626;
+  --purple:#7c3aed; --purple-bg:#f5f3ff;
+  --sans:'Inter',sans-serif; --serif:'Playfair Display',Georgia,serif;
+  --r:10px; --rl:14px;
 }
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
-body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; min-height: 100vh; }
-a { color: inherit; text-decoration: none; }
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:15px; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans);
+       line-height:1.6; min-height:100vh; }
+a { color:inherit; text-decoration:none; }
 
 /* ── Header ── */
-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 2rem 3rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-.logo-line { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
-.logo-dot  { width: 10px; height: 10px; border-radius: 50%; }
-.logo-tag  { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
-header h1  { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--text); }
-header .sub { font-size: 0.9rem; color: var(--muted); margin-top: 0.4rem; font-weight: 500; }
-.date-chip  { border-radius: 999px; padding: 0.4rem 1.2rem; font-size: 0.85rem; font-weight: 600; white-space: nowrap; border: 1px solid; }
+header { background:var(--surface); border-bottom:1px solid var(--border);
+         padding:1.75rem 3rem; display:flex; align-items:flex-end;
+         justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.logo-line { display:flex; align-items:center; gap:.6rem; margin-bottom:.3rem; }
+.logo-dot  { width:8px; height:8px; border-radius:50%; }
+.logo-tag  { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+             font-weight:700; }
+header h1  { font-family:var(--serif); font-size:clamp(1.5rem,3vw,2.1rem);
+             font-weight:600; letter-spacing:-.02em; line-height:1.1; }
+header .sub { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
+.date-chip  { border-radius:999px; padding:.35rem 1rem; font-size:.78rem;
+              font-weight:700; white-space:nowrap; border:1px solid; }
 
 /* ── KPI row ── */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; padding: 2rem 3rem; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 1.5rem; position: relative; overflow: hidden; box-shadow: var(--shadow-sm); }
-.kpi-accent { position: absolute; top: 0; left: 0; height: 4px; width: 100%; }
-.kpi-label  { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin-bottom: 0.5rem; }
-.kpi-val    { font-family: var(--sans); font-size: clamp(1.5rem, 2vw, 2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1; word-break: break-word; color: var(--text); }
-.kpi.blue   .kpi-accent { background: var(--blue); }
-.kpi.teal   .kpi-accent { background: var(--teal); }
-.kpi.amber  .kpi-accent { background: var(--amber); }
-.kpi.green  .kpi-accent { background: var(--emerald); }
-.kpi.purple .kpi-accent { background: var(--purple); }
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+           gap:1rem; padding:1.5rem 3rem; }
+.kpi { background:var(--surface); border:1px solid var(--border);
+       border-radius:var(--rl); padding:1rem 1.3rem; position:relative;
+       overflow:hidden; min-width:0; }
+.kpi-accent { position:absolute; top:0; left:1.3rem; height:3px; width:28px;
+              border-radius:0 0 3px 3px; }
+.kpi-label  { font-size:.65rem; text-transform:uppercase; letter-spacing:.1em;
+              color:var(--muted); font-weight:700; margin-bottom:.4rem; }
+.kpi-val    { font-family:var(--serif); font-size:clamp(.95rem,2vw,1.65rem);
+              font-weight:600; line-height:1; word-break:break-word; }
+.kpi.blue   .kpi-val { color:var(--blue); }
+.kpi.blue   .kpi-accent { background:var(--blue); }
+.kpi.teal   .kpi-val { color:var(--teal); }
+.kpi.teal   .kpi-accent { background:var(--teal); }
+.kpi.amber  .kpi-val { color:var(--amber); }
+.kpi.amber  .kpi-accent { background:var(--amber); }
+.kpi.green  .kpi-val { color:var(--emerald); }
+.kpi.green  .kpi-accent { background:var(--emerald); }
+.kpi.purple .kpi-val { color:var(--purple); }
+.kpi.purple .kpi-accent { background:var(--purple); }
 
 /* ── Charts ── */
-.charts-grid { padding: 0 3rem 2rem; display: grid; gap: 1.5rem; grid-template-columns: 3fr 2fr; }
-@media(max-width:860px) { .charts-grid { grid-template-columns: 1fr; } }
-.chart-card  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 1.5rem; box-shadow: var(--shadow-sm); }
-.chart-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text); font-weight: 700; margin-bottom: 1.25rem; }
-.chart-wrap  { position: relative; height: 280px; }
+.charts-grid { padding:0 3rem 1.5rem; display:grid; gap:1rem;
+               grid-template-columns:3fr 2fr; }
+@media(max-width:860px) { .charts-grid { grid-template-columns:1fr; } }
+.chart-card  { background:var(--surface); border:1px solid var(--border);
+               border-radius:var(--rl); padding:1.25rem 1.4rem 1rem; }
+.chart-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+               color:var(--muted); font-weight:700; margin-bottom:1rem; }
+.chart-wrap  { position:relative; height:250px; }
 
 /* ── Table section ── */
-.table-section { padding: 0 3rem 3rem; }
-.sec-head  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
-.sec-title { font-size: 1rem; color: var(--text); font-weight: 700; }
-.controls  { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
-.search-input { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-family: var(--sans); font-size: 0.9rem; padding: 0.5rem 1rem; outline: none; width: 220px; transition: all 0.2s; }
-.search-input:focus { border-color: var(--blue); background: var(--surface); box-shadow: 0 0 0 3px var(--blue-bg); }
-.search-input::placeholder { color: var(--subtle); }
-.legend { display: flex; gap: 1.2rem; font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; align-items: center; font-weight: 500; }
-.leg-item { display: flex; align-items: center; gap: 0.4rem; }
-.leg-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-.tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); overflow: auto; box-shadow: var(--shadow-sm); }
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
-thead tr { background: #F1F5F9; position: sticky; top: 0; z-index: 2; }
-th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); padding: 1rem 1.25rem; text-align: left; cursor: pointer; user-select: none; transition: background 0.15s; border-bottom: 1px solid var(--border); }
-th:hover { background: #E2E8F0; }
-th.r { text-align: right; } th.c { text-align: center; }
-th .si { margin-left: 0.4rem; opacity: 0.4; font-style: normal; font-size: 0.75rem; }
-th.sort-asc  .si::after { content: '▲'; opacity: 1; color: var(--blue); }
-th.sort-desc .si::after { content: '▼'; opacity: 1; color: var(--blue); }
-th:not(.sort-asc):not(.sort-desc) .si::after { content: '⇅'; }
-.srow { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-.srow:last-child { border-bottom: none; }
-.srow:hover { background: var(--bg); }
-td { padding: 1rem 1.25rem; vertical-align: middle; color: var(--text); }
-td.r { text-align: right; font-family: var(--mono); } td.c { text-align: center; }
-
-a.sym-tag { display: inline-block; font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 6px; text-decoration: none; border: 1px solid; transition: all 0.15s; }
-a.sym-tag:hover { filter: brightness(0.95); }
-.rs-tag  { display: inline-block; background: var(--amber-bg); border: 1px solid var(--amber-mid); color: var(--amber); font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; }
-.ema-tag { display: inline-block; font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid transparent; }
-.badge    { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 999px; padding: 0.3rem 0.8rem; border: 1px solid; }
-.badge-row { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
-footer { text-align: center; padding: 1.5rem; font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--border); background: var(--bg); }
-
+.table-section { padding:0 3rem 3rem; }
+.sec-head  { display:flex; align-items:center; justify-content:space-between;
+             margin-bottom:.85rem; flex-wrap:wrap; gap:.75rem; }
+.sec-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+             color:var(--muted); font-weight:700; }
+.controls  { display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; }
+.search-input { background:var(--surface); border:1px solid var(--border2);
+                border-radius:var(--r); color:var(--text); font-family:var(--sans);
+                font-size:.82rem; padding:.4rem .85rem; outline:none; width:190px;
+                transition:border-color .18s; }
+.search-input::placeholder { color:var(--subtle); }
+.legend { display:flex; gap:1.1rem; font-size:.7rem; color:var(--muted);
+          flex-wrap:wrap; align-items:center; }
+.leg-item { display:flex; align-items:center; gap:.3rem; }
+.leg-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.tbl-wrap { background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--rl); overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:.82rem; white-space:nowrap; }
+thead tr { background:#faf9f7; border-bottom:1px solid var(--border);
+           position:sticky; top:0; z-index:2; }
+th { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em;
+     color:var(--muted); padding:.7rem 1rem; text-align:left; cursor:pointer;
+     user-select:none; transition:background .12s; }
+th:hover { background:#f0ede8; }
+th.r { text-align:right; } th.c { text-align:center; }
+th .si { margin-left:.3rem; opacity:.35; font-style:normal; font-size:.7rem; }
+th.sort-asc  .si::after { content:'▲'; opacity:1; }
+th.sort-desc .si::after { content:'▼'; opacity:1; }
+th:not(.sort-asc):not(.sort-desc) .si::after { content:'⇅'; }
+.srow { border-bottom:1px solid var(--border); transition:background .12s; }
+.srow:last-child { border-bottom:none; }
+.srow:hover { background:#fafaf8; }
+td { padding:.7rem 1rem; vertical-align:middle; }
+td.r { text-align:right; } td.c { text-align:center; }
+a.sym-tag { display:inline-block; font-weight:700; font-size:.75rem;
+            padding:.17rem .55rem; border-radius:6px; letter-spacing:.04em;
+            text-decoration:none; border:1px solid; transition:background .15s; }
+.rs-tag  { display:inline-block; background:var(--amber-bg); border:1px solid #fde68a;
+           color:var(--amber); font-size:.73rem; font-weight:700;
+           padding:.14rem .5rem; border-radius:999px; }
+.ema-tag { display:inline-block; font-size:.73rem; font-weight:700;
+           padding:.14rem .5rem; border-radius:999px; border:1px solid transparent; }
+.bar-cell { display:flex; align-items:center; gap:.5rem; min-width:150px; }
+.bar-bg   { flex:1; height:5px; background:#ebe9e4; border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:99px; }
+.bar-pct  { font-size:.73rem; font-weight:700; min-width:36px; text-align:right; }
+.badge    { font-size:.65rem; font-weight:700; letter-spacing:.06em;
+            text-transform:uppercase; border-radius:999px; padding:.22rem .7rem;
+            border:1px solid; }
+.badge-row { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle);
+         border-top:1px solid var(--border); background:var(--surface); }
 /* ── CSV download button ── */
-.csv-bar { display: flex; align-items: center; gap: 16px; padding: 0.75rem 3rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-.csv-btn  { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; background: var(--surface); color: var(--text); font-size: 0.85rem; font-weight: 600; border: 1px solid var(--border2); border-radius: 6px; text-decoration: none; transition: all 0.15s; box-shadow: var(--shadow-sm); }
-.csv-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--bg); }
-.csv-btn-full { background: var(--blue); color: #fff; border-color: var(--blue); }
-.csv-btn-full:hover { background: #1D4ED8; color: #fff; border-color: #1D4ED8; }
-.csv-bar-label { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.csv-bar { display:flex; align-items:center; gap:12px; padding:.65rem 3rem;
+           background:var(--surface); border-bottom:1px solid var(--border); }
+.csv-btn  { display:inline-flex; align-items:center; gap:5px; padding:.4rem 1rem;
+            background:#238636; color:#fff; font-size:.78rem; font-weight:700;
+            border:1px solid #2ea043; border-radius:6px; text-decoration:none;
+            transition:background .15s; }
+.csv-btn:hover { background:#2ea043; }
+.csv-btn-full { background:#1f6feb; border-color:#388bfd; }
+.csv-btn-full:hover { background:#388bfd; }
+.csv-bar-label { font-size:.72rem; color:var(--muted); }
 """
-
 def _csv_bar(date_str: str, elite: bool = False) -> str:
+    """Returns the HTML download bar injected just after <header>."""
     scan_date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%Y-%m-%d")
     if elite:
         primary = f"passing_ema10_{date_str}.csv"
@@ -277,8 +290,8 @@ def _csv_bar(date_str: str, elite: bool = False) -> str:
     full = f"full_results_{date_str}.csv"
     return f"""
 <div class="csv-bar">
-  <a class="csv-btn csv-btn-full" href="{primary}" download="{primary}">{label}</a>
-  <a class="csv-btn" href="{full}" download="{full}">⬇ Full Results CSV</a>
+  <a class="csv-btn" href="{primary}" download="{primary}">{label}</a>
+  <a class="csv-btn csv-btn-full" href="{full}" download="{full}">⬇ Full Results CSV</a>
   <span class="csv-bar-label">{note}</span>
 </div>"""
 
@@ -325,9 +338,8 @@ function filterRows() {
 
 _CHARTJS_DEFAULTS = """
 Chart.defaults.font.family = "'Inter', sans-serif";
-Chart.defaults.font.size   = 12;
-Chart.defaults.color       = "#64748B";
-Chart.defaults.scale.grid.color = "#E2E8F0";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = "#78716c";
 """
 
 
@@ -378,8 +390,8 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
         result_date = row.get("result_date", "—")
         price_band = str(row.get("price_band", "—"))
 
-        close_s = f"{float(close):,.2f}" if _safe(close) else "N/A"
-        ema10_s = f"{float(ema10):,.2f}" if _safe(ema10) else "N/A"
+        close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
+        ema10_s = f"₹{float(ema10):,.2f}" if _safe(ema10) else "N/A"
         rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
         tmc_s   = fmt_cr(tmc)
         tv_s    = fmt_cr(tv)
@@ -387,11 +399,11 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
 
         try:
             above_ema = float(close) > float(ema10)
-            ema_col = "var(--emerald)" if above_ema else "var(--red)"
-            ema_bg  = "var(--green-bg)" if above_ema else "var(--red-bg)"
-            ema_bdr = "var(--green-mid)" if above_ema else "var(--red-mid)"
+            ema_col = "#15803d" if above_ema else "#dc2626"
+            ema_bg  = "#dcfce7" if above_ema else "#fee2e2"
+            ema_bdr = "#86efac" if above_ema else "#fca5a5"
         except Exception:
-            ema_col = "var(--muted)"; ema_bg = "var(--bg)"; ema_bdr = "var(--border2)"
+            ema_col = "#78716c"; ema_bg = "#f5f5f4"; ema_bdr = "#d4d0cb"
 
         rows_html += f"""
         <tr class="srow"
@@ -400,7 +412,7 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
           data-tv="{_r(tv)}" data-tvpct="{_r(tvpct, 6)}"
           data-indgrp="{ind_grp}" data-ind="{industry}">
           <td><a class="sym-tag"
-                 style="background:var(--blue-bg);border-color:var(--blue-mid);color:var(--blue)"
+                 style="background:var(--blue-bg);border-color:#bfdbfe;color:#1d4ed8"
                  href="{link}" target="_blank" rel="noopener">{sym}</a></td>
           <td class="r">{close_s}</td>
           <td class="r"><span class="ema-tag"
@@ -419,8 +431,9 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
         chart_total.append(_r(tmc))
 
     html = _html_head(f"Market Cap Dashboard — {date_display}")
-    html += _csv_bar(date_str, elite=False)
+    html += _csv_bar(date_str, elite=True)
     html += f"""
+<header>
 <header>
   <div>
     <div class="logo-line">
@@ -439,9 +452,9 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
   <div class="kpi purple"><div class="kpi-accent"></div>
     <div class="kpi-label">Above EMA10</div><div class="kpi-val">{n_above_ema}</div></div>
   <div class="kpi teal"><div class="kpi-accent"></div>
-    <div class="kpi-label">Total Market Cap</div><div class="kpi-val">₹{total_tmc_s}</div></div>
+    <div class="kpi-label">Combined Market Cap</div><div class="kpi-val">{total_tmc_s}</div></div>
   <div class="kpi green"><div class="kpi-accent"></div>
-    <div class="kpi-label">Total Traded Value</div><div class="kpi-val">₹{total_tv_s}</div></div>
+    <div class="kpi-label">Total Traded Value</div><div class="kpi-val">{total_tv_s}</div></div>
 </div>
 
 <div class="charts-grid" style="grid-template-columns:1fr">
@@ -455,8 +468,8 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
     <span class="sec-title">Passing Stocks Detail</span>
     <div class="controls">
       <div class="legend">
-        <div class="leg-item"><div class="leg-dot" style="background:var(--emerald)"></div>Close &gt; EMA10</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>Close ≤ EMA10</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#15803d"></div>Close &gt; EMA10</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#dc2626"></div>Close ≤ EMA10</div>
       </div>
       <input class="search-input" id="searchInput" type="text"
              placeholder="Search symbol / industry…" oninput="filterRows()"/>
@@ -482,7 +495,8 @@ def build_passing_dashboard(passing: pd.DataFrame, out_path: Path, date_str: str
   </div>
 </div>
 
-<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display} &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
+<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display}
+  &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
 
 <script>
 const labels    = [{",".join(chart_labels)}];
@@ -491,18 +505,20 @@ const totalData = [{",".join(chart_total)}];
 new Chart(document.getElementById('barChart'), {{
   type:'bar',
   data:{{ labels, datasets:[
-    {{ label:'Total Mkt Cap', data:totalData, backgroundColor:'#3B82F6',
-       borderColor:'#2563EB', borderWidth:1, borderRadius:4, hoverBackgroundColor: '#2563EB' }},
+    {{ label:'Total Mkt Cap', data:totalData, backgroundColor:'#bfdbfe',
+       borderColor:'#93c5fd', borderWidth:1, borderRadius:4 }},
   ]}},
   options:{{
     responsive:true, maintainAspectRatio:false,
     plugins:{{
-      legend:{{ display: false }},
-      tooltip:{{ backgroundColor:'#1E293B', titleColor:'#F8FAFC', bodyColor:'#F1F5F9', padding:12,
+      legend:{{ labels:{{ boxWidth:10, boxHeight:10, padding:14 }} }},
+      tooltip:{{ backgroundColor:'#fff', borderColor:'#e4e0d8', borderWidth:1,
+        titleColor:'#1c1917', bodyColor:'#78716c', padding:10,
         callbacks:{{ label: c => ` ${{c.dataset.label}}: ₹${{(c.parsed.y||0).toLocaleString('en-IN')}} Cr` }} }},
     }},
     scales:{{
-      y:{{ ticks:{{ callback: v=>'₹'+Number(v).toLocaleString('en-IN')}} }}
+      x:{{ ticks:{{color:'#a8a29e'}}, grid:{{color:'#f0ede8'}} }},
+      y:{{ ticks:{{color:'#a8a29e', callback: v=>'₹'+Number(v).toLocaleString('en-IN')}}, grid:{{color:'#f0ede8'}} }},
     }},
   }},
 }});
@@ -525,6 +541,10 @@ def build_passing_ema10_dashboard(
     date_str: str,
     history: list[dict] | None = None,
 ) -> None:
+    """
+    history: list of dicts with keys 'date' (YYYYMMDD str), 'count', 'market_cap_cr', 'traded_value_cr'
+             sorted oldest → newest. If None/empty, charts show only today's single point.
+    """
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
 
     n_total     = len(df)
@@ -550,8 +570,8 @@ def build_passing_ema10_dashboard(
         result_date = row.get("result_date", "—")
         price_band = str(row.get("price_band", "—"))
 
-        close_s = f"{float(close):,.2f}" if _safe(close) else "N/A"
-        ema10_s = f"{float(ema10):,.2f}" if _safe(ema10) else "N/A"
+        close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
+        ema10_s = f"₹{float(ema10):,.2f}" if _safe(ema10) else "N/A"
         rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
         tmc_s   = fmt_cr(tmc)
         tv_s    = fmt_cr(tv)
@@ -560,9 +580,9 @@ def build_passing_ema10_dashboard(
         try:
             gap_pct = (float(close) - float(ema10)) / float(ema10) * 100
             gap_s   = f"+{gap_pct:.2f}%"
-            gap_col = "var(--emerald)"
+            gap_col = "#15803d"
         except Exception:
-            gap_pct = -1.0; gap_s = "N/A"; gap_col = "var(--muted)"
+            gap_pct = -1.0; gap_s = "N/A"; gap_col = "#a8a29e"
 
         rows_html += f"""
         <tr class="srow"
@@ -575,8 +595,8 @@ def build_passing_ema10_dashboard(
                  href="{link}" target="_blank" rel="noopener">{sym}</a></td>
           <td class="r">{close_s}</td>
           <td class="r"><span class="ema-tag"
-               style="background:var(--bg);border-color:var(--border2);color:var(--text)">{ema10_s}</span></td>
-          <td class="r" style="color:{gap_col};font-weight:600">{gap_s}</td>
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">{ema10_s}</span></td>
+          <td class="r" style="color:{gap_col};font-weight:700">{gap_s}</td>
           <td class="r"><span class="rs-tag">{rs_s}</span></td>
           <td class="r">{tmc_s}</td>
           <td class="r">{tv_s}</td>
@@ -587,13 +607,20 @@ def build_passing_ema10_dashboard(
           <td class="c">{price_band}</td>
         </tr>"""
 
+    # ── Build history line-chart data ─────────────────────────────────────────
+    # history entries: {date: "YYYYMMDD", count: int, market_cap_cr: float, traded_value_cr: float}
     hist = list(history) if history else []
+
+    # Ensure today's point is always present / up-to-date
     today_entry = {
         "date": date_str,
         "count": n_total,
-        "market_cap_cr": float(df["total_market_cap_cr"].dropna().sum()) if "total_market_cap_cr" in df.columns else 0.0,
-        "traded_value_cr": float(df["traded_value_cr"].dropna().sum()) if "traded_value_cr" in df.columns else 0.0,
+        "market_cap_cr": float(df["total_market_cap_cr"].dropna().sum())
+                         if "total_market_cap_cr" in df.columns else 0.0,
+        "traded_value_cr": float(df["traded_value_cr"].dropna().sum())
+                           if "traded_value_cr" in df.columns else 0.0,
     }
+    # Replace or append today's entry
     hist = [h for h in hist if h.get("date") != date_str]
     hist.append(today_entry)
     hist.sort(key=lambda h: h["date"])
@@ -610,7 +637,6 @@ def build_passing_ema10_dashboard(
     hist_tv_js      = ",".join(str(round(float(h.get("traded_value_cr", 0)), 2))   for h in hist)
 
     html = _html_head(f"Momentum Alpha — {date_display}")
-    html += _csv_bar(date_str, elite=True)
     html += f"""
 <header>
   <div>
@@ -621,7 +647,7 @@ def build_passing_ema10_dashboard(
     <h1>Passing Stocks Above EMA10</h1>
     <p class="sub">All 8 Minervini conditions met &plus; Close &gt; 10-period EMA · NSE data</p>
     <div class="badge-row">
-      <span class="badge" style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)">✓ 8 Conditions</span>
+      <span class="badge" style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)">✓ All 8 Minervini Conditions</span>
       <span class="badge" style="background:var(--blue-bg);border-color:var(--blue-mid);color:var(--blue)">✓ Close &gt; EMA10</span>
     </div>
   </div>
@@ -632,30 +658,35 @@ def build_passing_ema10_dashboard(
   <div class="kpi green"><div class="kpi-accent"></div>
     <div class="kpi-label">Elite Stocks</div><div class="kpi-val">{n_total}</div></div>
   <div class="kpi teal"><div class="kpi-accent"></div>
-    <div class="kpi-label">Total Market Cap</div><div class="kpi-val">₹{total_tmc_s}</div></div>
+    <div class="kpi-label">Combined Market Cap</div><div class="kpi-val">{total_tmc_s}</div></div>
   <div class="kpi blue"><div class="kpi-accent"></div>
-    <div class="kpi-label">Total Traded Value</div><div class="kpi-val">₹{total_tv_s}</div></div>
+    <div class="kpi-label">Total Traded Value</div><div class="kpi-val">{total_tv_s}</div></div>
 </div>
 
 <div class="charts-grid" style="grid-template-columns:1fr 1fr 1fr">
   <div class="chart-card">
-    <div class="chart-title">Elite Stock Count</div>
+    <div class="chart-title">Elite Stock Count — Daily</div>
     <div class="chart-wrap"><canvas id="countChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Combined Market Cap (₹ Cr)</div>
+    <div class="chart-title">Combined Market Cap (₹ Cr) — Daily</div>
     <div class="chart-wrap"><canvas id="mcChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Total Traded Value (₹ Cr)</div>
+    <div class="chart-title">Total Traded Value (₹ Cr) — Daily</div>
     <div class="chart-wrap"><canvas id="tvChart"></canvas></div>
   </div>
 </div>
 
 <div class="table-section">
   <div class="sec-head">
-    <span class="sec-title">Elite Stocks Detail</span>
+    <span class="sec-title">Elite Stocks Detail &nbsp;({n_total} stocks)</span>
     <div class="controls">
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#15803d"></div>FF ≥ 50%</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#b45309"></div>FF 25–50%</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#dc2626"></div>FF &lt; 25%</div>
+      </div>
       <input class="search-input" id="searchInput" type="text"
              placeholder="Search symbol / industry…" oninput="filterRows()"/>
     </div>
@@ -681,7 +712,8 @@ def build_passing_ema10_dashboard(
   </div>
 </div>
 
-<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display} &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
+<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display}
+  &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
 
 <script>
 const histLabels = [{hist_labels_js}];
@@ -696,13 +728,14 @@ const _lineOpts = (yFmt, tooltipFmt) => ({{
   plugins: {{
     legend: {{ display: false }},
     tooltip: {{
-      backgroundColor: '#1E293B', titleColor: '#F8FAFC', bodyColor: '#F1F5F9', padding: 12,
+      backgroundColor: '#fff', borderColor: '#e4e0d8', borderWidth: 1,
+      titleColor: '#1c1917', bodyColor: '#78716c', padding: 10,
       callbacks: {{ label: tooltipFmt }},
     }},
   }},
   scales: {{
-    x: {{ ticks: {{ maxTicksLimit: 7 }} }},
-    y: {{ ticks: {{ callback: yFmt }} }},
+    x: {{ ticks: {{ color: '#a8a29e', maxTicksLimit: 10 }}, grid: {{ color: '#f0ede8' }} }},
+    y: {{ ticks: {{ color: '#a8a29e', callback: yFmt }}, grid: {{ color: '#f0ede8' }} }},
   }},
 }});
 
@@ -710,30 +743,39 @@ new Chart(document.getElementById('countChart'), {{
   type: 'line',
   data: {{ labels: histLabels, datasets: [{{
     label: 'Elite Stocks', data: histCount,
-    borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)',
-    borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#059669', fill: true,
+    borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.08)',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#059669', fill: true,
   }}]}},
-  options: _lineOpts( v => v, c => ` Elite Stocks: ${{c.parsed.y}}` ),
+  options: _lineOpts(
+    v => v,
+    c => ` Elite Stocks: ${{c.parsed.y}}`
+  ),
 }});
 
 new Chart(document.getElementById('mcChart'), {{
   type: 'line',
   data: {{ labels: histLabels, datasets: [{{
     label: 'Combined Mkt Cap', data: histMC,
-    borderColor: '#0D9488', backgroundColor: 'rgba(13,148,136,0.1)',
-    borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#0D9488', fill: true,
+    borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.08)',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#0d9488', fill: true,
   }}]}},
-  options: _lineOpts( v => '₹' + Number(v).toLocaleString('en-IN'), c => ` Mkt Cap: ₹${{(c.parsed.y||0).toLocaleString('en-IN')}} Cr` ),
+  options: _lineOpts(
+    v => '₹' + Number(v).toLocaleString('en-IN'),
+    c => ` Mkt Cap: ₹${{(c.parsed.y||0).toLocaleString('en-IN')}} Cr`
+  ),
 }});
 
 new Chart(document.getElementById('tvChart'), {{
   type: 'line',
   data: {{ labels: histLabels, datasets: [{{
     label: 'Traded Value', data: histTV,
-    borderColor: '#2563EB', backgroundColor: 'rgba(37,99,235,0.1)',
-    borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: true,
+    borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#2563eb', fill: true,
   }}]}},
-  options: _lineOpts( v => '₹' + Number(v).toLocaleString('en-IN'), c => ` Traded Value: ₹${{(c.parsed.y||0).toLocaleString('en-IN')}} Cr` ),
+  options: _lineOpts(
+    v => '₹' + Number(v).toLocaleString('en-IN'),
+    c => ` Traded Value: ₹${{(c.parsed.y||0).toLocaleString('en-IN')}} Cr`
+  ),
 }});
 {_FILTER_JS}
 {_TABLE_SORT_JS}
@@ -748,6 +790,10 @@ new Chart(document.getElementById('tvChart'), {{
 #  VOLUME ACTION DASHBOARD
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  VOLUME ACTION DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+
 def build_volume_action_dashboard(
     volume_df: pd.DataFrame,
     out_path: Path,
@@ -755,13 +801,19 @@ def build_volume_action_dashboard(
 ) -> None:
 
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
+
     rows = ""
 
-    for _, row in volume_df.sort_values("relative_volume", ascending=False).iterrows():
+    for _, row in volume_df.sort_values(
+        "relative_volume",
+        ascending=False
+    ).iterrows():
+
         sym        = str(row.get("symbol", "")).replace(".NS", "")
         close      = row.get("close", np.nan)
         rel_vol    = row.get("relative_volume", np.nan)
         rs         = row.get("rs_percentile", np.nan)
+
         ind_grp    = str(row.get("industry_group", "")) or "—"
         industry   = str(row.get("industry", "")) or "—"
         result_date = row.get("result_date", "—")
@@ -769,77 +821,174 @@ def build_volume_action_dashboard(
 
         rows += f"""
         <tr class='srow'
-            data-sym="{sym}" data-indgrp="{ind_grp}" data-ind="{industry}"
-            data-close="{_r(close)}" data-relvol="{_r(rel_vol)}" data-rs="{_r(rs)}">
+            data-sym="{sym}"
+            data-indgrp="{ind_grp}"
+            data-ind="{industry}"
+            data-close="{_r(close)}"
+            data-relvol="{_r(rel_vol)}"
+            data-rs="{_r(rs)}">
+
             <td>
-                <a class='sym-tag' style="background:var(--blue-bg);border-color:var(--blue-mid);color:var(--blue)"
-                   href='{_tv_link(sym)}' target='_blank' rel='noopener'>{sym}</a>
+                <a class='sym-tag'
+                   style="background:var(--blue-bg);border-color:#bfdbfe;color:#1d4ed8"
+                   href='{_tv_link(sym)}'
+                   target='_blank'
+                   rel='noopener'>
+                   {sym}
+                </a>
             </td>
-            <td class='r'>{"{:,.2f}".format(float(close)) if _safe(close) else "N/A"}</td>
-            <td class='r' style="font-weight:600;color:var(--blue)">{"{:.1f}%".format(float(rel_vol)) if _safe(rel_vol) else "N/A"}</td>
+
+            <td class='r'>
+                {"₹{:,.2f}".format(float(close)) if _safe(close) else "N/A"}
+            </td>
+
+            <td class='r'>
+                {"{:.1f}%".format(float(rel_vol)) if _safe(rel_vol) else "N/A"}
+            </td>
+
             <td class='c'>
-                <span class='badge' style='background:var(--blue-bg);color:var(--blue);border-color:var(--blue-mid);'>BLUE PPV</span>
+                <span class='badge'
+                    style='background:var(--blue-bg);
+                           color:var(--blue);
+                           border-color:var(--blue-mid);'>
+                    BLUE PPV
+                </span>
             </td>
-            <td class='c'>{'🔥' if row.get('bull_snort', False) else '-'}</td>
-            <td class='r'><span class='rs-tag'>{round(float(rs),1) if _safe(rs) else "N/A"}</span></td>
+
+            <td class='c'>
+                {'🔥' if row.get('bull_snort', False) else '-'}
+            </td>
+
+            <td class='r'>
+                <span class='rs-tag'>
+                    {round(float(rs),1) if _safe(rs) else "N/A"}
+                </span>
+            </td>
+
             <td>{ind_grp}</td>
             <td>{industry}</td>
             <td class='r'>{result_date}</td>
             <td class="c">{price_band}</td>
-        </tr>"""
+        </tr>
+        """
 
     html = _html_head("Volume Action Dashboard") + f"""
+
 <header>
   <div>
     <div class='logo-line'>
       <span class='logo-dot' style='background:var(--blue)'></span>
-      <span class='logo-tag' style="color:var(--blue)">Momentum Alpha</span>
+      <span class='logo-tag'>Momentum Alpha</span>
     </div>
+
     <h1>Volume Action</h1>
-    <div class='sub'>Pocket Pivot / Blue Volume Stocks</div>
+
+    <div class='sub'>
+      Pocket Pivot / Blue Volume Stocks • {date_display}
+    </div>
   </div>
-  <div class='date-chip' style='border-color:var(--blue-mid);background:var(--blue-bg);color:var(--blue);'>{len(volume_df)} Stocks &nbsp;|&nbsp; {date_display}</div>
+
+  <div class='date-chip'
+       style='border-color:var(--blue-mid);
+              background:var(--blue-bg);
+              color:var(--blue);'>
+       {len(volume_df)} Stocks
+  </div>
 </header>
 
-<div class="table-section" style="padding-top: 2rem;">
+<div class="table-section">
+
   <div class="sec-head">
-    <span class="sec-title">Volume Action Stocks</span>
+
+    <span class="sec-title">
+      Volume Action Stocks
+    </span>
+
     <div class="controls">
-      <input class="search-input" id="searchInput" type="text"
-             placeholder="Search symbol / industry…" oninput="filterRows()"/>
+      <input class="search-input"
+             id="searchInput"
+             type="text"
+             placeholder="Search symbol / industry…"
+             oninput="filterRows()"/>
     </div>
+
   </div>
+
   <div class='tbl-wrap'>
+
     <table id="mainTable">
+
       <thead>
         <tr>
-          <th data-col="sym" data-type="str">Symbol<i class="si"></i></th>
-          <th class='r' data-col="close" data-type="num">Close<i class="si"></i></th>
-          <th class='r' data-col="relvol" data-type="num">Rel Volume<i class="si"></i></th>
-          <th class='c'>Signal</th>
-          <th class='c'>Bull Snort</th>
-          <th class='r' data-col="rs" data-type="num">RS<i class="si"></i></th>
-          <th data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
-          <th data-col="ind" data-type="str">Industry<i class="si"></i></th>
-          <th class="r" data-col="result" data-type="str">Result Date<i class="si"></i></th>
-          <th class="c" data-col="priceband" data-type="str">Price Band<i class="si"></i></th>
+          <th data-col="sym" data-type="str">
+            Symbol<i class="si"></i>
+          </th>
+
+          <th class='r' data-col="close" data-type="num">
+            Close<i class="si"></i>
+          </th>
+
+          <th class='r' data-col="relvol" data-type="num">
+            Rel Volume<i class="si"></i>
+          </th>
+
+          <th class='c'>
+            Signal
+          </th>
+
+          <th class='c'>
+            Bull Snort
+          </th>
+
+          <th class='r' data-col="rs" data-type="num">
+            RS<i class="si"></i>
+          </th>
+
+          <th data-col="indgrp" data-type="str">
+            Industry Group<i class="si"></i>
+          </th>
+
+          <th data-col="ind" data-type="str">
+            Industry<i class="si"></i>
+          </th>
+
+          <th class="r" data-col="result" data-type="str">
+            Result Date<i class="si"></i>
+
+          <th class="c" data-col="priceband" data-type="str">
+            Price Band<i class="si"></i></th>
+
+          </th>
+
         </tr>
       </thead>
-      <tbody id="tableBody">{rows}</tbody>
+
+      <tbody id="tableBody">
+        {rows}
+      </tbody>
+
     </table>
+
   </div>
 </div>
-<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display}</footer>
+
+<footer>
+  Data from NSE India &nbsp;·&nbsp;
+  Generated {date_display}
+</footer>
+
 <script>
 {_FILTER_JS}
 {_TABLE_SORT_JS}
 </script>
+
 </body>
 </html>
 """
-    out_path.write_text(html, encoding='utf-8')
-    logger.info("Volume action dashboard → %s", out_path)
 
+    out_path.write_text(html, encoding='utf-8')
+
+    logger.info("Volume action dashboard → %s", out_path)
 # ─────────────────────────────────────────────────────────────────────────────
 #  ROCKET DASHBOARD  (all 8 conditions + Inside Bar on latest close)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -849,6 +998,7 @@ def build_rocket_dashboard(
     out_path: Path,
     date_str: str,
 ) -> None:
+    """Rocket Stocks: passing all 8 Minervini conditions AND forming an Inside Bar."""
 
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
 
@@ -879,12 +1029,13 @@ def build_rocket_dashboard(
             ind_grp  = str(row.get("industry_group", "")) or "—"
             industry = str(row.get("industry", ""))       or "—"
 
-            close_s  = f"{float(close):,.2f}" if _safe(close) else "N/A"
-            ema10_s  = f"{float(ema10):,.2f}" if _safe(ema10) else "N/A"
+            close_s  = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
+            ema10_s  = f"₹{float(ema10):,.2f}" if _safe(ema10) else "N/A"
             rs_s     = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
             tmc_s    = fmt_cr(tmc)
             tv_s     = fmt_cr(tv)
 
+            # % from 52w high / above 52w low — compute on the fly if not pre-enriched
             if not _safe(hi52_pct) and _safe(close) and _safe(row.get("52w_high")):
                 hi52_pct = (float(close) / float(row["52w_high"]) - 1) * 100
             if not _safe(lo52_pct) and _safe(close) and _safe(row.get("52w_low")):
@@ -900,39 +1051,39 @@ def build_rocket_dashboard(
               data-indgrp="{ind_grp}" data-ind="{industry}">
               <td>
                 <a class="sym-tag"
-                   style="background:var(--amber-bg);border-color:var(--amber-mid);color:var(--amber)"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
                    href="{link}" target="_blank" rel="noopener">{sym}</a>
-                <span style="font-size:0.65rem;background:var(--amber-bg);
-                             border:1px solid var(--amber-mid);color:var(--amber);padding:2px 6px;
-                             border-radius:4px;font-weight:700;margin-left:6px">IB</span>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
               </td>
               <td class="r">{close_s}</td>
               <td class="r"><span class="ema-tag"
-                   style="background:var(--bg);border-color:var(--border2);color:var(--text)">{ema10_s}</span></td>
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">{ema10_s}</span></td>
               <td class="r"><span class="rs-tag">{rs_s}</span></td>
-              <td class="r" style="color:var(--emerald);font-weight:600">{lo52_s}</td>
-              <td class="r" style="color:var(--amber);font-weight:600">{hi52_s}</td>
+              <td class="r" style="color:#15803d;font-weight:600">{lo52_s}</td>
+              <td class="r" style="color:#b45309;font-weight:600">{hi52_s}</td>
               <td class="r">{tmc_s}</td>
               <td class="r">{tv_s}</td>
               <td>{ind_grp}</td>
             </tr>"""
 
-    html = _html_head(f"Rocket Stocks — {date_display}")
+    html = _html_head(f"🚀 Rocket Stocks — {date_display}")
     html += f"""
 <header>
   <div>
     <div class="logo-line">
-      <div class="logo-dot" style="background:var(--amber)"></div>
-      <span class="logo-tag" style="color:var(--amber)">Momentum Alpha · Rocket Stocks</span>
+      <div class="logo-dot" style="background:#f97316"></div>
+      <span class="logo-tag" style="color:#f97316">Momentum Alpha · Rocket Stocks</span>
     </div>
     <h1>🚀 Rocket Stocks</h1>
     <p class="sub">All 8 Minervini conditions met &plus; Inside Bar on latest close · NSE data</p>
     <div class="badge-row">
-      <span class="badge" style="background:var(--amber-bg);border-color:var(--amber-mid);color:var(--amber)">✓ 8 Conditions</span>
-      <span class="badge" style="background:var(--amber-bg);border-color:var(--amber-mid);color:var(--amber)">✓ Inside Bar</span>
+      <span class="badge" style="background:#fff7ed;border-color:#fdba74;color:#c2410c">✓ All 8 Minervini Conditions</span>
+      <span class="badge" style="background:#fff7ed;border-color:#f97316;color:#f97316">✓ Inside Bar</span>
     </div>
   </div>
-  <div class="date-chip" style="background:var(--amber-bg);border-color:var(--amber-mid);color:var(--amber)">{date_display}</div>
+  <div class="date-chip" style="background:#fff7ed;border-color:#fdba74;color:#c2410c">{date_display}</div>
 </header>
 
 <div class="kpi-row">
@@ -950,15 +1101,15 @@ def build_rocket_dashboard(
   </div>
 </div>
 
-<div style="padding:1rem 3rem 0;font-size:0.85rem;color:var(--muted)">
-  <strong style="color:var(--text)">Inside Bar:</strong>
+<div style="padding:.75rem 3rem 0;font-size:.78rem;color:var(--muted)">
+  <strong style="color:#f97316">Inside Bar:</strong>
   Today's high &lt; yesterday's high <strong>AND</strong> today's low &gt; yesterday's low —
   price compression inside a strong uptrend. A potential coiling setup before breakout.
 </div>
 
-<div class="table-section" style="padding-top: 1.5rem;">
+<div class="table-section">
   <div class="sec-head">
-    <span class="sec-title">Rocket Stocks</span>
+    <span class="sec-title">Rocket Stocks ({n_rocket})</span>
     <div class="controls">
       <input class="search-input" id="searchInput" type="text"
              placeholder="Search symbol / industry…" oninput="filterRows()"/>
@@ -982,7 +1133,8 @@ def build_rocket_dashboard(
   </div>
 </div>
 
-<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display} &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
+<footer>Data from NSE India &nbsp;·&nbsp; Generated {date_display}
+  &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
 
 <script>
 {_FILTER_JS}

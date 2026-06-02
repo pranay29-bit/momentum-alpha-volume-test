@@ -35,21 +35,41 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_market_sentiment(index_rows: "pd.DataFrame | None" = None) -> dict:
+def get_market_sentiment() -> dict:
     """
-    Compute NIFTY SMALLCAP 100 and NIFTY SMALLCAP 250 sentiment from data
-    that has already been downloaded by download_all().
+    Fetch NIFTY SMALLCAP 100 and NIFTY SMALLCAP 250 index data, compute
+    EMA10 / EMA20, and return a sentiment dict.
 
-    Parameters
-    ----------
-    index_rows : DataFrame with rows for the two index symbols ('^CNXSC.NS'
-                 and 'NIFTYSMLCAP250.NS'), containing at minimum 'symbol',
-                 'close', 'EMA10', and 'EMA20' columns as produced by
-                 add_indicators() + evaluate_trend_template().
-                 If None or empty, returns an 'unavailable' sentinel dict.
+    Data source priority per index
+    --------------------------------
+    1. yfinance ``download()`` — single-ticker call with period='1y'.
+       Uses the same code-path as data_loader (works on GitHub Actions).
+       Each index is downloaded individually so the result is a flat
+       DataFrame with a plain ``Close`` column (no MultiIndex ambiguity).
+    2. jugaad_data ``NSEIndexHistory`` — posts to niftyindices.com.
+       Works when that host isn't Akamai-blocked (local runs, some CIs).
 
-    Returns a dict compatible with _build_sentiment_html() in main.py.
+    Do NOT add these index symbols to your CSV / stock scan.  This
+    function fetches them independently so they never pollute the
+    passing-stocks dashboards.
     """
+    import yfinance as yf
+
+    # Each entry: result_key → (display_name, yf_tickers_to_try, jugaad_name)
+    # Multiple yf_tickers are tried in order until one returns ≥21 rows.
+    INDICES = {
+        "cnxsmallcap": (
+            "Smallcap 100",
+            ["^CNXSC", "CNXSC.NS"],          # ^CNXSC is the Yahoo ticker
+            "NIFTY SMALLCAP 100",
+        ),
+        "niftysmlcap250": (
+            "Smallcap 250",
+            ["^NSMIDCP", "NIFTYSMLCAP250.NS"],  # best available Yahoo proxy
+            "NIFTY SMALLCAP 250",
+        ),
+    }
+
     result: dict = {
         "cnxsmallcap": {
             "close": None, "ema10": None, "ema20": None,
@@ -64,57 +84,109 @@ def get_market_sentiment(index_rows: "pd.DataFrame | None" = None) -> dict:
         "overall": "unavailable",
     }
 
-    if index_rows is None or (hasattr(index_rows, "empty") and index_rows.empty):
-        print("[Market Sentiment] No pre-downloaded index data supplied — returning unavailable")
-        return result
-
-    # Map each index symbol to its result key
-    SYMBOL_MAP = {
-        "^CNXSC.NS":          "cnxsmallcap",
-        "CNXSC.NS":           "cnxsmallcap",
-        "NIFTYSMLCAP250.NS":  "niftysmlcap250",
-    }
-
     ok_count   = 0
     bull_count = 0
 
-    for _, row in index_rows.iterrows():
-        sym = str(row.get("symbol", ""))
-        key = SYMBOL_MAP.get(sym)
-        if key is None:
+    for key, (display_name, yf_tickers, jugaad_name) in INDICES.items():
+        close_series: pd.Series | None = None
+
+        # ── Strategy 1: yfinance download() (single-ticker, flat DataFrame) ──
+        # Using download() rather than Ticker.history() because download()
+        # returns full history for ^ index tickers; Ticker.history() often
+        # returns only 1 row for the same symbol on GitHub Actions.
+        for ticker in yf_tickers:
+            if close_series is not None:
+                break
+            try:
+                raw = yf.download(
+                    tickers=ticker,
+                    period="1y",
+                    interval="1d",
+                    auto_adjust=True,
+                    progress=False,
+                    threads=False,
+                )
+                if raw is None or raw.empty:
+                    print(f"[Market Sentiment] yf.download {ticker}: empty")
+                    continue
+
+                # Single-ticker download → flat columns; grab Close
+                if isinstance(raw.columns, pd.MultiIndex):
+                    # Shouldn't happen for single ticker, but handle it
+                    close_col = [c for c in raw.columns if c[0] == "Close"]
+                    if not close_col:
+                        continue
+                    s = raw[close_col[0]].dropna()
+                else:
+                    if "Close" not in raw.columns:
+                        continue
+                    s = raw["Close"].dropna()
+
+                s = s.sort_index()
+                if len(s) < 21:
+                    print(f"[Market Sentiment] yf.download {ticker}: only {len(s)} rows")
+                    continue
+
+                close_series = s
+                print(
+                    f"[Market Sentiment] {display_name} ✓ via yfinance ({ticker})"
+                    f"  rows={len(s)}  last={float(s.iloc[-1]):.2f}"
+                )
+            except Exception as exc:
+                print(f"[Market Sentiment] yf.download {ticker} error: {exc}")
+
+        # ── Strategy 2: jugaad_data NSEIndexHistory (niftyindices.com POST) ──
+        if close_series is None:
+            try:
+                from datetime import date as _date, timedelta as _td
+                from jugaad_data.nse import NSEIndexHistory
+                ih      = NSEIndexHistory()
+                to_d    = _date.today()
+                from_d  = to_d - _td(days=120)   # extra buffer for weekends/holidays
+                raw_rows = ih.index_raw(
+                    symbol=jugaad_name, from_date=from_d, to_date=to_d
+                )
+                if not raw_rows:
+                    print(f"[Market Sentiment] jugaad_data {jugaad_name}: no rows returned")
+                else:
+                    df_j = pd.DataFrame(raw_rows)
+                    date_col  = ("HistoricalDate" if "HistoricalDate" in df_j.columns
+                                 else "Index Date")
+                    close_col = ("CLOSE" if "CLOSE" in df_j.columns
+                                 else "Closing Index Value")
+                    df_j[date_col] = pd.to_datetime(df_j[date_col])
+                    df_j = df_j.sort_values(date_col)
+                    s = df_j[close_col].astype(float).reset_index(drop=True)
+                    if len(s) < 21:
+                        print(f"[Market Sentiment] jugaad_data {jugaad_name}: only {len(s)} rows")
+                    else:
+                        close_series = s
+                        print(
+                            f"[Market Sentiment] {display_name} ✓ via jugaad_data"
+                            f"  rows={len(s)}  last={float(s.iloc[-1]):.2f}"
+                        )
+            except Exception as exc:
+                print(f"[Market Sentiment] jugaad_data {jugaad_name} error: {exc}")
+
+        # ── Compute EMAs if we have enough data ───────────────────────────────
+        if close_series is None or len(close_series) < 21:
+            print(f"[Market Sentiment] {display_name}: no usable data — marked unavailable")
             continue
 
-        close = row.get("close")
-        ema10 = row.get("EMA10")
-        ema20 = row.get("EMA20")   # EMA20 is computed by add_indicators()
+        last  = float(close_series.iloc[-1])
+        ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
+        ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
 
-        try:
-            close = float(close)
-            ema10 = float(ema10)
-            ema20 = float(ema20)
-        except (TypeError, ValueError):
-            print(f"[Market Sentiment] {sym}: missing close/EMA values — skipping")
-            continue
-
-        if any(np.isnan(v) for v in (close, ema10, ema20)):
-            print(f"[Market Sentiment] {sym}: NaN in close/EMA values — skipping")
-            continue
-
-        above10 = close > ema10
-        above20 = close > ema20
+        above10 = last > ema10
+        above20 = last > ema20
 
         result[key].update({
-            "close":       round(close, 2),
+            "close":       round(last,  2),
             "ema10":       round(ema10, 2),
             "ema20":       round(ema20, 2),
             "above_ema10": above10,
             "above_ema20": above20,
         })
-        print(
-            f"[Market Sentiment] {result[key]['name']} ({sym}): "
-            f"close={close:.2f}  EMA10={ema10:.2f}  EMA20={ema20:.2f}  "
-            f"above10={above10}  above20={above20}"
-        )
 
         ok_count += 1
         if above10 and above20:
@@ -122,6 +194,7 @@ def get_market_sentiment(index_rows: "pd.DataFrame | None" = None) -> dict:
         elif above10 or above20:
             bull_count += 0.5
 
+    # ── Overall sentiment ─────────────────────────────────────────────────────
     if ok_count == 0:
         result["overall"] = "unavailable"
     elif bull_count >= ok_count * 0.75:

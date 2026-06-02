@@ -159,7 +159,7 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
 
 <div class="kpi-row">
   <div class="kpi blue"><div class="kpi-accent"></div>
-    <div class="kpi-label">Passing Stocks</div><div class="kpi-val">1</div></div>
+    <div class="kpi-label">Passing Stocks</div><div class="kpi-val">2</div></div>
   <div class="kpi purple"><div class="kpi-accent"></div>
     <div class="kpi-label">Above EMA10</div><div class="kpi-val">1</div></div>
   <div class="kpi teal"><div class="kpi-accent"></div>
@@ -221,6 +221,26 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
           <td>Personal Care</td>
           <td class="r">—</td>
           <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NIFTYSMLCAP250" data-close="null" data-rs="null"
+          data-ema10="null" data-tmc="null"
+          data-tv="null" data-tvpct="null"
+          data-indgrp="Index" data-ind="Index">
+          <td><a class="sym-tag"
+                 style="background:var(--blue-bg);border-color:#bfdbfe;color:#1d4ed8"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANIFTYSMLCAP250" target="_blank" rel="noopener">NIFTYSMLCAP250</a></td>
+          <td class="r">N/A</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#fee2e2;border-color:#fca5a5;color:#dc2626">N/A</span></td>
+          <td class="r"><span class="rs-tag">N/A</span></td>
+          <td class="r">N/A</td>
+          <td class="r">N/A</td>
+          <td class="r">N/A</td>
+          <td>Index</td>
+          <td>Index</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
         </tr></tbody>
     </table>
   </div>
@@ -230,8 +250,8 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
   &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
 
 <script>
-const labels    = ["BAJAJCON"];
-const totalData = [7466.8];
+const labels    = ["BAJAJCON","NIFTYSMLCAP250"];
+const totalData = [7466.8,null];
 
 Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.font.size   = 11;

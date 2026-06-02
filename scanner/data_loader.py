@@ -35,7 +35,24 @@ _RATE_LIMIT_BACKOFF = 30.0
 def load_symbols(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> list[str]:
     df  = pd.read_csv(csv_path)
     raw = df[symbol_col].dropna().astype(str).str.strip().unique().tolist()
-    return [s if "." in s else s + EXCHANGE_SUFFIX for s in raw]
+    
+    processed_symbols = []
+    for s in raw:
+        # 1. Catch the exact strings from your CSV and assign the correct Yahoo Finance tickers
+        if s == "CNX Small cap" or s == "^CNXSC":
+            processed_symbols.append("^CNXSC")
+        elif s == "Nifty Small Cap 250" or s == "NIFTYSMLCAP250.NS":
+            processed_symbols.append("NIFTYSMLCAP250.NS")
+            
+        # 2. Skip appending .NS if it already has a period OR if it's an index starting with ^
+        elif "." in s or s.startswith("^"):
+            processed_symbols.append(s)
+            
+        # 3. Default behavior for regular NSE equity symbols (e.g., RELIANCE -> RELIANCE.NS)
+        else:
+            processed_symbols.append(s + EXCHANGE_SUFFIX)
+            
+    return processed_symbols
 
 
 def load_symbol_metadata(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> pd.DataFrame:

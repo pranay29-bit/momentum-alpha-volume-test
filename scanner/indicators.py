@@ -37,94 +37,125 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 def get_market_sentiment() -> dict:
     """
-    Fetch NIFTY SMALLCAP 100 and NIFTY SMALLCAP 250 index data directly from NSE 
-    using jugaad_data, compute EMA10 / EMA20, and return a sentiment dict.
-    """
-    from datetime import date, timedelta
-    import pandas as pd
-    from jugaad_data.nse import index_raw
+    Fetch NIFTY SMALLCAP 100 and NIFTY SMALLCAP 250 index data via yfinance,
+    compute EMA10 / EMA20, and return a sentiment dict.
 
-    # Exact official index names as required by the NSE website
+    Strategy (tried in order per index):
+      1. yfinance — primary, same library used for all stock data
+      2. jugaad_data NSEIndexHistory — fallback if yfinance returns empty
+         (niftyindices.com may be blocked behind Akamai on some networks)
+
+    Returns a dict with keys 'cnxsmallcap', 'niftysmlcap250', and 'overall'.
+    """
+    import yfinance as yf
+
+    # yfinance ticker → (display key, display name)
+    # Primary tickers; fallback tickers tried if the primary returns no data.
     INDICES = {
         "cnxsmallcap": {
-            "name": "NIFTY SMALLCAP 100",
-            "display_name": "Smallcap 100"
+            "name":           "Smallcap 100",
+            "yf_tickers":     ["^CNXSC", "NIFTY_SMLCAP_100.NS"],
+            "jugaad_name":    "NIFTY SMALLCAP 100",
         },
         "niftysmlcap250": {
-            "name": "NIFTY SMALLCAP 250",
-            "display_name": "Smallcap 250"
+            "name":           "Smallcap 250",
+            "yf_tickers":     ["NIFTYSMLCAP250.NS", "^NSMIDCP"],
+            "jugaad_name":    "NIFTY SMALLCAP 250",
         },
     }
 
     result: dict = {
         "cnxsmallcap":    {"close": None, "ema10": None, "ema20": None,
-                           "above_ema10": None, "above_ema20": None, "name": "Smallcap 100"},
+                           "above_ema10": None, "above_ema20": None,
+                           "name": "Smallcap 100"},
         "niftysmlcap250": {"close": None, "ema10": None, "ema20": None,
-                           "above_ema10": None, "above_ema20": None, "name": "Smallcap 250"},
+                           "above_ema10": None, "above_ema20": None,
+                           "name": "Smallcap 250"},
         "overall": "unavailable",
     }
 
     ok_count   = 0
     bull_count = 0
 
-    # Fetch the last 90 days of data to safely calculate the 20-day EMA
-    to_date = date.today()
-    from_date = to_date - timedelta(days=90)
-
     for key, meta in INDICES.items():
-        try:
-            # 1. Fetch historical index data from the NSE servers
-            raw_data = index_raw(symbol=meta["name"], from_date=from_date, to_date=to_date)
-            
-            if not raw_data:
-                print(f"[Market Sentiment] No data found for {meta['name']} on NSE")
-                continue
+        close_series: pd.Series | None = None
 
-            df = pd.DataFrame(raw_data)
+        # ── 1. Try yfinance tickers ───────────────────────────────────────────
+        for ticker_sym in meta["yf_tickers"]:
+            try:
+                hist = yf.Ticker(ticker_sym).history(period="90d", auto_adjust=True)
+                if hist.empty or "Close" not in hist.columns:
+                    continue
+                s = hist["Close"].dropna()
+                if len(s) >= 21:
+                    close_series = s.sort_index()
+                    print(f"[Market Sentiment] {meta['name']} OK via yfinance ({ticker_sym})"
+                          f" — {len(s)} rows")
+                    break
+                print(f"[Market Sentiment] {ticker_sym}: only {len(s)} rows, skipping")
+            except Exception as yf_exc:
+                print(f"[Market Sentiment] yfinance {ticker_sym} failed: {yf_exc}")
 
-            # 2. Extract and format dates and closing prices
-            # (jugaad_data typically returns 'HistoricalDate' and 'CLOSE')
-            date_col = "HistoricalDate" if "HistoricalDate" in df.columns else "Index Date"
-            close_col = "CLOSE" if "CLOSE" in df.columns else "Closing Index Value"
+        # ── 2. Fallback: jugaad_data NSEIndexHistory ──────────────────────────
+        if close_series is None:
+            try:
+                from datetime import date as _date, timedelta as _td
+                from jugaad_data.nse import NSEIndexHistory
+                ih = NSEIndexHistory()
+                to_d   = _date.today()
+                from_d = to_d - _td(days=90)
+                raw    = ih.index_raw(symbol=meta["jugaad_name"],
+                                      from_date=from_d, to_date=to_d)
+                if raw:
+                    df_raw = pd.DataFrame(raw)
+                    date_col  = ("HistoricalDate" if "HistoricalDate" in df_raw.columns
+                                 else "Index Date")
+                    close_col = ("CLOSE" if "CLOSE" in df_raw.columns
+                                 else "Closing Index Value")
+                    df_raw[date_col] = pd.to_datetime(df_raw[date_col])
+                    df_raw = df_raw.sort_values(date_col)
+                    s = df_raw[close_col].astype(float).reset_index(drop=True)
+                    if len(s) >= 21:
+                        close_series = s
+                        print(f"[Market Sentiment] {meta['name']} OK via jugaad_data"
+                              f" — {len(s)} rows")
+                    else:
+                        print(f"[Market Sentiment] jugaad_data {meta['name']}:"
+                              f" only {len(s)} rows")
+                else:
+                    print(f"[Market Sentiment] jugaad_data returned no data for"
+                          f" {meta['jugaad_name']}")
+            except Exception as jd_exc:
+                print(f"[Market Sentiment] jugaad_data fallback failed for"
+                      f" {meta['name']}: {jd_exc}")
 
-            df[date_col] = pd.to_datetime(df[date_col])
-            
-            # 3. Sort chronologically (oldest to newest) for accurate EMA calculation
-            df = df.sort_values(by=date_col).reset_index(drop=True)
-            close_series = df[close_col].astype(float)
+        # ── Compute EMAs if we have data ──────────────────────────────────────
+        if close_series is None or len(close_series) < 21:
+            print(f"[Market Sentiment] {meta['name']}: no usable data, marking unavailable")
+            continue
 
-            if len(close_series) < 21:
-                print(f"[Market Sentiment] Not enough data rows for {meta['name']}")
-                continue
+        last  = float(close_series.iloc[-1])
+        ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
+        ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
 
-            print(f"[Market Sentiment] {meta['name']} OK — {len(close_series)} rows fetched from NSE")
+        above10 = last > ema10
+        above20 = last > ema20
 
-            # 4. Calculate EMAs
-            last  = float(close_series.iloc[-1])
-            ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
-            ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
+        result[key].update({
+            "close":       round(last,  2),
+            "ema10":       round(ema10, 2),
+            "ema20":       round(ema20, 2),
+            "above_ema10": above10,
+            "above_ema20": above20,
+        })
 
-            above10 = last > ema10
-            above20 = last > ema20
+        ok_count += 1
+        if above10 and above20:
+            bull_count += 1
+        elif above10 or above20:
+            bull_count += 0.5
 
-            result[key].update({
-                "close":       round(last,  2),
-                "ema10":       round(ema10, 2),
-                "ema20":       round(ema20, 2),
-                "above_ema10": above10,
-                "above_ema20": above20,
-            })
-
-            ok_count += 1
-            if above10 and above20:
-                bull_count += 1
-            elif above10 or above20:
-                bull_count += 0.5
-
-        except Exception as e:
-            print(f"[Market Sentiment] {meta['name']} failed: {e}")
-
-    # 5. Evaluate overall sentiment based on the index data
+    # ── Overall sentiment ─────────────────────────────────────────────────────
     if ok_count == 0:
         result["overall"] = "unavailable"
     elif bull_count >= ok_count * 0.75:

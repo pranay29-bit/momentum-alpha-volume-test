@@ -78,7 +78,12 @@ def run() -> None:
     logger.info("Full results → %s", full_path)
 
     # ── 5. Passing stocks ─────────────────────────────────────────────────────
-    passing = df[df["all_conditions_met"]].copy()
+    
+    # 1. Catch our exact indices so they don't get deleted by the momentum filter
+    is_index = df["symbol"].isin(["^CNXSC", "NIFTYSMLCAP250.NS"])
+    
+    # 2. Keep the stock if it meets all conditions OR if it is one of our indices
+    passing = df[df["all_conditions_met"] | is_index].copy()
 
     if not passing.empty:
         passing = enrich_with_market_caps(passing)

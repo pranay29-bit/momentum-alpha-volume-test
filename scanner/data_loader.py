@@ -31,35 +31,24 @@ _RATE_LIMIT_BACKOFF = 30.0
 
 
 # ── Symbol list & metadata ─────────────────────────────────────────────────────
-def _map_sym(s: str) -> str:
-    """Translates the specific CSV symbols into Yahoo Finance tickers."""
-    s_upper = str(s).strip().upper()
-    
-    # Fix the missing prefix for CNXSC
-    if s_upper == "CNXSC":
-        return "^CNXSC"
-        
-    # NIFTYSMLCAP250 will naturally fall through to the default behavior below
-    # and get the .NS suffix added to it, which is exactly what we want!
-    
-    # Default behavior for everything else
-    if "." in s_upper or s_upper.startswith("^"):
-        return s_upper
-    return s_upper + EXCHANGE_SUFFIX
-
 
 def load_symbols(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> list[str]:
-    df = pd.read_csv(csv_path)
-    raw = df[symbol_col].dropna().astype(str).unique().tolist()
-    return [_map_sym(s) for s in raw]
+    df  = pd.read_csv(csv_path)
+    raw = df[symbol_col].dropna().astype(str).str.strip().unique().tolist()
+    return [s if "." in s else s + EXCHANGE_SUFFIX for s in raw]
 
 
 def load_symbol_metadata(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLUMN) -> pd.DataFrame:
+    """
+    Return a DataFrame indexed by the Yahoo-suffixed symbol with
+    'industry_group' and 'industry' columns (sourced from NSE_Stocks.csv).
+    """
     df = pd.read_csv(csv_path)
     df[symbol_col] = df[symbol_col].dropna().astype(str).str.strip()
     df = df[df[symbol_col].str.len() > 0].copy()
-    
-    df["symbol_ns"] = df[symbol_col].apply(_map_sym)
+    df["symbol_ns"] = df[symbol_col].apply(
+        lambda s: s if "." in s else s + EXCHANGE_SUFFIX
+    )
 
     meta_cols = {"symbol_ns": "symbol_ns"}
     if "Industry Group" in df.columns:
@@ -69,6 +58,8 @@ def load_symbol_metadata(csv_path: str = CSV_PATH, symbol_col: str = SYMBOL_COLU
 
     meta = df[[c for c in meta_cols]].rename(columns=meta_cols)
     return meta.drop_duplicates(subset=["symbol_ns"]).set_index("symbol_ns")
+
+
 # ── Batch downloader ──────────────────────────────────────────────────────────
 
 def _chunk(lst: list, n: int):

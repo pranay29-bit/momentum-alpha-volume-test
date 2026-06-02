@@ -78,12 +78,14 @@ def run() -> None:
     logger.info("Full results → %s", full_path)
 
     # ── 5. Passing stocks ─────────────────────────────────────────────────────
-    
-    # 1. Catch our exact indices so they don't get deleted by the momentum filter
-    is_index = df["symbol"].isin(["^CNXSC", "NIFTYSMLCAP250.NS"])
-    
-    # 2. Keep the stock if it meets all conditions OR if it is one of our indices
-    passing = df[df["all_conditions_met"] | is_index].copy()
+
+    # Symbols used purely as market-sentiment sentinels — exclude from stock dashboards.
+    # yfinance may append ".NS" so both forms are listed for safety.
+    INDEX_SYMBOLS = {"^CNXSC", "^CNXSC.NS", "CNXSC.NS", "NIFTYSMLCAP250.NS"}
+    is_index = df["symbol"].isin(INDEX_SYMBOLS)
+
+    # Only stocks that meet all 8 conditions (no index rows leaking in)
+    passing = df[df["all_conditions_met"] & ~is_index].copy()
 
     if not passing.empty:
         passing = enrich_with_market_caps(passing)
@@ -186,9 +188,13 @@ def run() -> None:
             today_str,
         )
 
+
+
     # ── 9b. Market Sentiment (small-cap indices) ──────────────────────────────
-    logger.info("Fetching market sentiment (small-cap indices)…")
-    sentiment = get_market_sentiment()
+    # Reuse already-downloaded index rows from df — no extra network calls needed.
+    logger.info("Computing market sentiment from pre-downloaded index data…")
+    index_rows = df[is_index].copy()
+    sentiment  = get_market_sentiment(index_rows=index_rows)
     logger.info("Market sentiment:\n%s", json.dumps(sentiment, indent=2, default=str))
 
     # ── 10. Update docs/index.html  (GitHub Pages landing page) ───────────────

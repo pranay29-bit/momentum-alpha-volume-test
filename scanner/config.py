@@ -14,7 +14,7 @@ DATA_DIR     = ROOT_DIR / "data"
 WEB_DIR      = ROOT_DIR / "web"
 DOCS_DIR     = ROOT_DIR / "docs"          # GitHub Pages root
 
-CSV_PATH     = os.getenv("NSE_CSV_PATH", str(DATA_DIR / "NSE_Stocks.csv"))
+CSV_PATH     = os.getenv("NSE_CSV_PATH", str(DATA_DIR / "NSE_stocks_test.csv"))
 SYMBOL_COLUMN = "Symbol"
 EXCHANGE_SUFFIX = ".NS"
 

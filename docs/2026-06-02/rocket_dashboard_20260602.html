@@ -158,7 +158,7 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
 <div class="kpi-row">
   <div class="kpi amber"><div class="kpi-accent"></div>
     <div class="kpi-label">Rocket Stocks</div>
-    <div class="kpi-val">0</div>
+    <div class="kpi-val">1</div>
   </div>
   <div class="kpi blue"><div class="kpi-accent"></div>
     <div class="kpi-label">Total Passing Stocks</div>
@@ -166,7 +166,7 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
   </div>
   <div class="kpi green"><div class="kpi-accent"></div>
     <div class="kpi-label">Inside Bar Hit Rate</div>
-    <div class="kpi-val">0.0%</div>
+    <div class="kpi-val">50.0%</div>
   </div>
 </div>
 
@@ -178,7 +178,7 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
 
 <div class="table-section">
   <div class="sec-head">
-    <span class="sec-title">Rocket Stocks (0)</span>
+    <span class="sec-title">Rocket Stocks (1)</span>
     <div class="controls">
       <input class="search-input" id="searchInput" type="text"
              placeholder="Search symbol / industry…" oninput="filterRows()"/>
@@ -198,9 +198,28 @@ footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle)
         <th data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
       </tr></thead>
       <tbody id="tableBody">
-        <tr><td colspan="9" style="text-align:center;padding:60px;color:var(--muted)">
-          No Rocket Stocks today — no inside bars found among passing stocks.
-        </td></tr></tbody>
+            <tr class="srow"
+              data-sym="BAJAJCON" data-close="559.05" data-rs="100.0"
+              data-ema10="551.55" data-tmc="7466.8" data-tv="76.04"
+              data-indgrp="Personal Products" data-ind="Personal Care">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3ABAJAJCON" target="_blank" rel="noopener">BAJAJCON</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹559.05</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹551.55</span></td>
+              <td class="r"><span class="rs-tag">100.0</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+232.3%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-3.8%</td>
+              <td class="r">₹7,467 Cr</td>
+              <td class="r">₹76 Cr</td>
+              <td>Personal Products</td>
+            </tr></tbody>
     </table>
   </div>
 </div>

@@ -1,0 +1,3412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Momentum Alpha — 02 Jun 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#f5f3ef; --surface:#ffffff; --border:#e4e0d8; --border2:#ccc8bf;
+  --text:#1c1917; --muted:#78716c; --subtle:#a8a29e;
+  --blue:#2563eb; --blue-bg:#eff6ff; --blue-mid:#bfdbfe;
+  --teal:#0d9488; --amber:#b45309; --amber-bg:#fffbeb;
+  --green:#15803d; --green-bg:#f0fdf4; --green-mid:#86efac;
+  --emerald:#059669; --red:#dc2626;
+  --purple:#7c3aed; --purple-bg:#f5f3ff;
+  --sans:'Inter',sans-serif; --serif:'Playfair Display',Georgia,serif;
+  --r:10px; --rl:14px;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:15px; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans);
+       line-height:1.6; min-height:100vh; }
+a { color:inherit; text-decoration:none; }
+
+/* ── Header ── */
+header { background:var(--surface); border-bottom:1px solid var(--border);
+         padding:1.75rem 3rem; display:flex; align-items:flex-end;
+         justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.logo-line { display:flex; align-items:center; gap:.6rem; margin-bottom:.3rem; }
+.logo-dot  { width:8px; height:8px; border-radius:50%; }
+.logo-tag  { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+             font-weight:700; }
+header h1  { font-family:var(--serif); font-size:clamp(1.5rem,3vw,2.1rem);
+             font-weight:600; letter-spacing:-.02em; line-height:1.1; }
+header .sub { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
+.date-chip  { border-radius:999px; padding:.35rem 1rem; font-size:.78rem;
+              font-weight:700; white-space:nowrap; border:1px solid; }
+
+/* ── KPI row ── */
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+           gap:1rem; padding:1.5rem 3rem; }
+.kpi { background:var(--surface); border:1px solid var(--border);
+       border-radius:var(--rl); padding:1rem 1.3rem; position:relative;
+       overflow:hidden; min-width:0; }
+.kpi-accent { position:absolute; top:0; left:1.3rem; height:3px; width:28px;
+              border-radius:0 0 3px 3px; }
+.kpi-label  { font-size:.65rem; text-transform:uppercase; letter-spacing:.1em;
+              color:var(--muted); font-weight:700; margin-bottom:.4rem; }
+.kpi-val    { font-family:var(--serif); font-size:clamp(.95rem,2vw,1.65rem);
+              font-weight:600; line-height:1; word-break:break-word; }
+.kpi.blue   .kpi-val { color:var(--blue); }
+.kpi.blue   .kpi-accent { background:var(--blue); }
+.kpi.teal   .kpi-val { color:var(--teal); }
+.kpi.teal   .kpi-accent { background:var(--teal); }
+.kpi.amber  .kpi-val { color:var(--amber); }
+.kpi.amber  .kpi-accent { background:var(--amber); }
+.kpi.green  .kpi-val { color:var(--emerald); }
+.kpi.green  .kpi-accent { background:var(--emerald); }
+.kpi.purple .kpi-val { color:var(--purple); }
+.kpi.purple .kpi-accent { background:var(--purple); }
+
+/* ── Charts ── */
+.charts-grid { padding:0 3rem 1.5rem; display:grid; gap:1rem;
+               grid-template-columns:3fr 2fr; }
+@media(max-width:860px) { .charts-grid { grid-template-columns:1fr; } }
+.chart-card  { background:var(--surface); border:1px solid var(--border);
+               border-radius:var(--rl); padding:1.25rem 1.4rem 1rem; }
+.chart-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+               color:var(--muted); font-weight:700; margin-bottom:1rem; }
+.chart-wrap  { position:relative; height:250px; }
+
+/* ── Table section ── */
+.table-section { padding:0 3rem 3rem; }
+.sec-head  { display:flex; align-items:center; justify-content:space-between;
+             margin-bottom:.85rem; flex-wrap:wrap; gap:.75rem; }
+.sec-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+             color:var(--muted); font-weight:700; }
+.controls  { display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; }
+.search-input { background:var(--surface); border:1px solid var(--border2);
+                border-radius:var(--r); color:var(--text); font-family:var(--sans);
+                font-size:.82rem; padding:.4rem .85rem; outline:none; width:190px;
+                transition:border-color .18s; }
+.search-input::placeholder { color:var(--subtle); }
+.legend { display:flex; gap:1.1rem; font-size:.7rem; color:var(--muted);
+          flex-wrap:wrap; align-items:center; }
+.leg-item { display:flex; align-items:center; gap:.3rem; }
+.leg-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.tbl-wrap { background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--rl); overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:.82rem; white-space:nowrap; }
+thead tr { background:#faf9f7; border-bottom:1px solid var(--border);
+           position:sticky; top:0; z-index:2; }
+th { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em;
+     color:var(--muted); padding:.7rem 1rem; text-align:left; cursor:pointer;
+     user-select:none; transition:background .12s; }
+th:hover { background:#f0ede8; }
+th.r { text-align:right; } th.c { text-align:center; }
+th .si { margin-left:.3rem; opacity:.35; font-style:normal; font-size:.7rem; }
+th.sort-asc  .si::after { content:'▲'; opacity:1; }
+th.sort-desc .si::after { content:'▼'; opacity:1; }
+th:not(.sort-asc):not(.sort-desc) .si::after { content:'⇅'; }
+.srow { border-bottom:1px solid var(--border); transition:background .12s; }
+.srow:last-child { border-bottom:none; }
+.srow:hover { background:#fafaf8; }
+td { padding:.7rem 1rem; vertical-align:middle; }
+td.r { text-align:right; } td.c { text-align:center; }
+a.sym-tag { display:inline-block; font-weight:700; font-size:.75rem;
+            padding:.17rem .55rem; border-radius:6px; letter-spacing:.04em;
+            text-decoration:none; border:1px solid; transition:background .15s; }
+.rs-tag  { display:inline-block; background:var(--amber-bg); border:1px solid #fde68a;
+           color:var(--amber); font-size:.73rem; font-weight:700;
+           padding:.14rem .5rem; border-radius:999px; }
+.ema-tag { display:inline-block; font-size:.73rem; font-weight:700;
+           padding:.14rem .5rem; border-radius:999px; border:1px solid transparent; }
+.bar-cell { display:flex; align-items:center; gap:.5rem; min-width:150px; }
+.bar-bg   { flex:1; height:5px; background:#ebe9e4; border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:99px; }
+.bar-pct  { font-size:.73rem; font-weight:700; min-width:36px; text-align:right; }
+.badge    { font-size:.65rem; font-weight:700; letter-spacing:.06em;
+            text-transform:uppercase; border-radius:999px; padding:.22rem .7rem;
+            border:1px solid; }
+.badge-row { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle);
+         border-top:1px solid var(--border); background:var(--surface); }
+/* ── CSV download button ── */
+.csv-bar { display:flex; align-items:center; gap:12px; padding:.65rem 3rem;
+           background:var(--surface); border-bottom:1px solid var(--border); }
+.csv-btn  { display:inline-flex; align-items:center; gap:5px; padding:.4rem 1rem;
+            background:#238636; color:#fff; font-size:.78rem; font-weight:700;
+            border:1px solid #2ea043; border-radius:6px; text-decoration:none;
+            transition:background .15s; }
+.csv-btn:hover { background:#2ea043; }
+.csv-btn-full { background:#1f6feb; border-color:#388bfd; }
+.csv-btn-full:hover { background:#388bfd; }
+.csv-bar-label { font-size:.72rem; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-line">
+      <div class="logo-dot" style="background:var(--emerald)"></div>
+      <span class="logo-tag" style="color:var(--emerald)">Momentum Alpha · Elite Filter</span>
+    </div>
+    <h1>Passing Stocks Above EMA10</h1>
+    <p class="sub">All 8 Minervini conditions met &plus; Close &gt; 10-period EMA · NSE data</p>
+    <div class="badge-row">
+      <span class="badge" style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)">✓ All 8 Minervini Conditions</span>
+      <span class="badge" style="background:var(--blue-bg);border-color:var(--blue-mid);color:var(--blue)">✓ Close &gt; EMA10</span>
+    </div>
+  </div>
+  <div class="date-chip" style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)">02 Jun 2026</div>
+</header>
+
+<div class="kpi-row">
+  <div class="kpi green"><div class="kpi-accent"></div>
+    <div class="kpi-label">Elite Stocks</div><div class="kpi-val">147</div></div>
+  <div class="kpi teal"><div class="kpi-accent"></div>
+    <div class="kpi-label">Combined Market Cap</div><div class="kpi-val">₹48.86L Cr</div></div>
+  <div class="kpi blue"><div class="kpi-accent"></div>
+    <div class="kpi-label">Total Traded Value</div><div class="kpi-val">₹19,126 Cr</div></div>
+</div>
+
+<div class="charts-grid" style="grid-template-columns:1fr 1fr 1fr">
+  <div class="chart-card">
+    <div class="chart-title">Elite Stock Count — Daily</div>
+    <div class="chart-wrap"><canvas id="countChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Combined Market Cap (₹ Cr) — Daily</div>
+    <div class="chart-wrap"><canvas id="mcChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Total Traded Value (₹ Cr) — Daily</div>
+    <div class="chart-wrap"><canvas id="tvChart"></canvas></div>
+  </div>
+</div>
+
+<div class="table-section">
+  <div class="sec-head">
+    <span class="sec-title">Elite Stocks Detail &nbsp;(147 stocks)</span>
+    <div class="controls">
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#15803d"></div>FF ≥ 50%</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#b45309"></div>FF 25–50%</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#dc2626"></div>FF &lt; 25%</div>
+      </div>
+      <input class="search-input" id="searchInput" type="text"
+             placeholder="Search symbol / industry…" oninput="filterRows()"/>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table id="mainTable">
+      <thead><tr>
+        <th data-col="sym"    data-type="str">Symbol<i class="si"></i></th>
+        <th class="r" data-col="close"  data-type="num">Close ₹<i class="si"></i></th>
+        <th class="r" data-col="ema10"  data-type="num">EMA10 ₹<i class="si"></i></th>
+        <th class="r" data-col="gap"    data-type="num">Gap % Above EMA10<i class="si"></i></th>
+        <th class="r" data-col="rs"     data-type="num">RS %ile<i class="si"></i></th>
+        <th class="r" data-col="tmc"    data-type="num">Total Mkt Cap<i class="si"></i></th>
+        <th class="r" data-col="tv"     data-type="num">Traded Value<i class="si"></i></th>
+        <th class="r" data-col="tvpct"  data-type="num">TV % of Mkt Cap<i class="si"></i></th>
+        <th          data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
+        <th          data-col="ind"    data-type="str">Industry<i class="si"></i></th>
+        <th class="r" data-col="result" data-type="str">Result Date<t class="si"></i></th>
+        <th class="c" data-col="priceband" data-type="str">Price Band<i class="si"></i></th>
+      </tr></thead>
+      <tbody id="tableBody">
+        <tr class="srow"
+          data-sym="SWANDEF" data-close="2038.3" data-ema10="1989.38"
+          data-gap="2.459" data-rs="100.0" data-tmc="10738.2"
+          data-tv="5.0" data-tvpct="0.0466"
+          data-indgrp="Industrial Manufacturing" data-ind="Ship Building & Allied Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASWANDEF" target="_blank" rel="noopener">SWANDEF</a></td>
+          <td class="r">₹2,038.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,989.38</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.46%</td>
+          <td class="r"><span class="rs-tag">100.0</span></td>
+          <td class="r">₹10,738 Cr</td>
+          <td class="r">₹5 Cr</td>
+          <td class="r">0.0466%</td>
+          <td>Industrial Manufacturing</td>
+          <td>Ship Building & Allied Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="STLTECH" data-close="591.05" data-ema10="506.07"
+          data-gap="16.7925" data-rs="99.95" data-tmc="28853.15"
+          data-tv="405.15" data-tvpct="1.4042"
+          data-indgrp="Telecom -  Equipment & Accessories" data-ind="Telecom -  Equipment & Accessories">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASTLTECH" target="_blank" rel="noopener">STLTECH</a></td>
+          <td class="r">₹591.05</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹506.07</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+16.79%</td>
+          <td class="r"><span class="rs-tag">100.0</span></td>
+          <td class="r">₹28,853 Cr</td>
+          <td class="r">₹405 Cr</td>
+          <td class="r">1.4042%</td>
+          <td>Telecom -  Equipment & Accessories</td>
+          <td>Telecom -  Equipment & Accessories</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="CUPID" data-close="128.35" data-ema10="126.51"
+          data-gap="1.4505" data-rs="99.9" data-tmc="17258.72"
+          data-tv="243.65" data-tvpct="1.4118"
+          data-indgrp="Personal Products" data-ind="Personal Care">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACUPID" target="_blank" rel="noopener">CUPID</a></td>
+          <td class="r">₹128.35</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹126.51</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.45%</td>
+          <td class="r"><span class="rs-tag">99.9</span></td>
+          <td class="r">₹17,259 Cr</td>
+          <td class="r">₹244 Cr</td>
+          <td class="r">1.4118%</td>
+          <td>Personal Products</td>
+          <td>Personal Care</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SIGMAADV" data-close="416.1" data-ema10="382.67"
+          data-gap="8.7368" data-rs="99.85" data-tmc="7333.33"
+          data-tv="14.18" data-tvpct="0.1934"
+          data-indgrp="Aerospace & Defense" data-ind="Aerospace & Defense">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASIGMAADV" target="_blank" rel="noopener">SIGMAADV</a></td>
+          <td class="r">₹416.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹382.67</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+8.74%</td>
+          <td class="r"><span class="rs-tag">99.9</span></td>
+          <td class="r">₹7,333 Cr</td>
+          <td class="r">₹14 Cr</td>
+          <td class="r">0.1934%</td>
+          <td>Aerospace & Defense</td>
+          <td>Aerospace & Defense</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VMARCIND" data-close="1404.85" data-ema10="1218.28"
+          data-gap="15.314" data-rs="99.71" data-tmc="441.28"
+          data-tv="0.85" data-tvpct="0.1917"
+          data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVMARCIND" target="_blank" rel="noopener">VMARCIND</a></td>
+          <td class="r">₹1,404.85</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,218.28</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+15.31%</td>
+          <td class="r"><span class="rs-tag">99.7</span></td>
+          <td class="r">₹441 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1917%</td>
+          <td>Industrial Products</td>
+          <td>Cables - Electricals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="BHAGYANGR" data-close="323.2" data-ema10="297.03"
+          data-gap="8.8116" data-rs="99.61" data-tmc="1034.08"
+          data-tv="10.71" data-tvpct="1.0361"
+          data-indgrp="Non - Ferrous Metals" data-ind="Copper">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ABHAGYANGR" target="_blank" rel="noopener">BHAGYANGR</a></td>
+          <td class="r">₹323.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹297.03</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+8.81%</td>
+          <td class="r"><span class="rs-tag">99.6</span></td>
+          <td class="r">₹1,034 Cr</td>
+          <td class="r">₹11 Cr</td>
+          <td class="r">1.0361%</td>
+          <td>Non - Ferrous Metals</td>
+          <td>Copper</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="PRIZOR" data-close="691.65" data-ema10="657.06"
+          data-gap="5.2649" data-rs="99.46" data-tmc="194.79"
+          data-tv="0.55" data-tvpct="0.2823"
+          data-indgrp="Industrial Manufacturing" data-ind="Industrial Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APRIZOR" target="_blank" rel="noopener">PRIZOR</a></td>
+          <td class="r">₹691.65</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹657.06</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.26%</td>
+          <td class="r"><span class="rs-tag">99.5</span></td>
+          <td class="r">₹195 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.2823%</td>
+          <td>Industrial Manufacturing</td>
+          <td>Industrial Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VENUSREM" data-close="1411.3" data-ema10="1218.26"
+          data-gap="15.8454" data-rs="99.41" data-tmc="1888.7"
+          data-tv="8.42" data-tvpct="0.446"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVENUSREM" target="_blank" rel="noopener">VENUSREM</a></td>
+          <td class="r">₹1,411.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,218.26</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+15.85%</td>
+          <td class="r"><span class="rs-tag">99.4</span></td>
+          <td class="r">₹1,889 Cr</td>
+          <td class="r">₹8 Cr</td>
+          <td class="r">0.4460%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SALSTEEL" data-close="61.67" data-ema10="58.79"
+          data-gap="4.9018" data-rs="99.37" data-tmc="892.78"
+          data-tv="1.01" data-tvpct="0.1129"
+          data-indgrp="Ferrous Metals" data-ind="Sponge Iron">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASALSTEEL" target="_blank" rel="noopener">SALSTEEL</a></td>
+          <td class="r">₹61.67</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹58.79</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.90%</td>
+          <td class="r"><span class="rs-tag">99.4</span></td>
+          <td class="r">₹893 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1129%</td>
+          <td>Ferrous Metals</td>
+          <td>Sponge Iron</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HOACFOODS" data-close="570.75" data-ema10="543.83"
+          data-gap="4.951" data-rs="99.32" data-tmc="56.3"
+          data-tv="0.07" data-tvpct="0.1283"
+          data-indgrp="Food Products" data-ind="Other Food Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHOACFOODS" target="_blank" rel="noopener">HOACFOODS</a></td>
+          <td class="r">₹570.75</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹543.83</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.95%</td>
+          <td class="r"><span class="rs-tag">99.3</span></td>
+          <td class="r">₹56 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.1283%</td>
+          <td>Food Products</td>
+          <td>Other Food Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="GVPIL" data-close="858.95" data-ema10="794.91"
+          data-gap="8.0564" data-rs="99.27" data-tmc="5774.5"
+          data-tv="17.98" data-tvpct="0.3113"
+          data-indgrp="Electrical Equipment" data-ind="Heavy Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AGVPIL" target="_blank" rel="noopener">GVPIL</a></td>
+          <td class="r">₹858.95</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹794.91</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+8.06%</td>
+          <td class="r"><span class="rs-tag">99.3</span></td>
+          <td class="r">₹5,774 Cr</td>
+          <td class="r">₹18 Cr</td>
+          <td class="r">0.3113%</td>
+          <td>Electrical Equipment</td>
+          <td>Heavy Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="BLISSGVS" data-close="434.45" data-ema10="368.32"
+          data-gap="17.955" data-rs="99.22" data-tmc="4596.0"
+          data-tv="104.22" data-tvpct="2.2676"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ABLISSGVS" target="_blank" rel="noopener">BLISSGVS</a></td>
+          <td class="r">₹434.45</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹368.32</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+17.95%</td>
+          <td class="r"><span class="rs-tag">99.2</span></td>
+          <td class="r">₹4,596 Cr</td>
+          <td class="r">₹104 Cr</td>
+          <td class="r">2.2676%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="BAJAJCON" data-close="571.65" data-ema10="555.21"
+          data-gap="2.9617" data-rs="99.07" data-tmc="7466.8"
+          data-tv="76.23" data-tvpct="1.0209"
+          data-indgrp="Personal Products" data-ind="Personal Care">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ABAJAJCON" target="_blank" rel="noopener">BAJAJCON</a></td>
+          <td class="r">₹571.65</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹555.21</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.96%</td>
+          <td class="r"><span class="rs-tag">99.1</span></td>
+          <td class="r">₹7,467 Cr</td>
+          <td class="r">₹76 Cr</td>
+          <td class="r">1.0209%</td>
+          <td>Personal Products</td>
+          <td>Personal Care</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MAHASTEEL" data-close="953.9" data-ema10="901.43"
+          data-gap="5.8202" data-rs="99.02" data-tmc="1567.68"
+          data-tv="0.67" data-tvpct="0.0429"
+          data-indgrp="Industrial Products" data-ind="Iron & Steel Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMAHASTEEL" target="_blank" rel="noopener">MAHASTEEL</a></td>
+          <td class="r">₹953.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹901.43</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.82%</td>
+          <td class="r"><span class="rs-tag">99.0</span></td>
+          <td class="r">₹1,568 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.0429%</td>
+          <td>Industrial Products</td>
+          <td>Iron & Steel Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ATHERENERG" data-close="960.6" data-ema10="941.52"
+          data-gap="2.0269" data-rs="98.88" data-tmc="36802.6"
+          data-tv="415.79" data-tvpct="1.1298"
+          data-indgrp="Automobiles" data-ind="2/3 Wheelers">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AATHERENERG" target="_blank" rel="noopener">ATHERENERG</a></td>
+          <td class="r">₹960.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹941.52</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.03%</td>
+          <td class="r"><span class="rs-tag">98.9</span></td>
+          <td class="r">₹36,803 Cr</td>
+          <td class="r">₹416 Cr</td>
+          <td class="r">1.1298%</td>
+          <td>Automobiles</td>
+          <td>2/3 Wheelers</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="UCL" data-close="155.75" data-ema10="152.83"
+          data-gap="1.9133" data-rs="98.78" data-tmc="67.03"
+          data-tv="0.17" data-tvpct="0.2538"
+          data-indgrp="Chemicals & Petrochemicals" data-ind="Dyes And Pigments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AUCL" target="_blank" rel="noopener">UCL</a></td>
+          <td class="r">₹155.75</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹152.83</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.91%</td>
+          <td class="r"><span class="rs-tag">98.8</span></td>
+          <td class="r">₹67 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.2538%</td>
+          <td>Chemicals & Petrochemicals</td>
+          <td>Dyes And Pigments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="GAYAPROJ" data-close="20.61" data-ema10="18.74"
+          data-gap="9.9532" data-rs="98.73" data-tmc="956.92"
+          data-tv="0.86" data-tvpct="0.0899"
+          data-indgrp="Construction" data-ind="Civil Construction">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AGAYAPROJ" target="_blank" rel="noopener">GAYAPROJ</a></td>
+          <td class="r">₹20.61</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹18.74</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+9.95%</td>
+          <td class="r"><span class="rs-tag">98.7</span></td>
+          <td class="r">₹957 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.0899%</td>
+          <td>Construction</td>
+          <td>Civil Construction</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ROSSTECH" data-close="1080.5" data-ema10="1003.28"
+          data-gap="7.6972" data-rs="98.54" data-tmc="4088.64"
+          data-tv="14.43" data-tvpct="0.3529"
+          data-indgrp="Aerospace & Defense" data-ind="Aerospace & Defense">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AROSSTECH" target="_blank" rel="noopener">ROSSTECH</a></td>
+          <td class="r">₹1,080.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,003.28</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+7.70%</td>
+          <td class="r"><span class="rs-tag">98.5</span></td>
+          <td class="r">₹4,089 Cr</td>
+          <td class="r">₹14 Cr</td>
+          <td class="r">0.3529%</td>
+          <td>Aerospace & Defense</td>
+          <td>Aerospace & Defense</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SAKAR" data-close="834.6" data-ema10="784.02"
+          data-gap="6.4516" data-rs="98.39" data-tmc="1831.94"
+          data-tv="14.29" data-tvpct="0.78"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASAKAR" target="_blank" rel="noopener">SAKAR</a></td>
+          <td class="r">₹834.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹784.02</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+6.45%</td>
+          <td class="r"><span class="rs-tag">98.4</span></td>
+          <td class="r">₹1,832 Cr</td>
+          <td class="r">₹14 Cr</td>
+          <td class="r">0.7800%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="LUMAXTECH" data-close="1746.8" data-ema10="1688.98"
+          data-gap="3.4234" data-rs="98.34" data-tmc="11905.79"
+          data-tv="44.56" data-tvpct="0.3743"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ALUMAXTECH" target="_blank" rel="noopener">LUMAXTECH</a></td>
+          <td class="r">₹1,746.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,688.98</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.42%</td>
+          <td class="r"><span class="rs-tag">98.3</span></td>
+          <td class="r">₹11,906 Cr</td>
+          <td class="r">₹45 Cr</td>
+          <td class="r">0.3743%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SHEETAL" data-close="295.0" data-ema10="289.1"
+          data-gap="2.0394" data-rs="98.29" data-tmc="67.53"
+          data-tv="0.05" data-tvpct="0.0777"
+          data-indgrp="Agricultural Food & other Products" data-ind="Other Agricultural Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASHEETAL" target="_blank" rel="noopener">SHEETAL</a></td>
+          <td class="r">₹295.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹289.10</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.04%</td>
+          <td class="r"><span class="rs-tag">98.3</span></td>
+          <td class="r">₹68 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0777%</td>
+          <td>Agricultural Food & other Products</td>
+          <td>Other Agricultural Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ACUTAAS" data-close="3037.6" data-ema10="2976.36"
+          data-gap="2.0575" data-rs="98.24" data-tmc="24869.17"
+          data-tv="160.46" data-tvpct="0.6452"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AACUTAAS" target="_blank" rel="noopener">ACUTAAS</a></td>
+          <td class="r">₹3,037.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,976.36</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.06%</td>
+          <td class="r"><span class="rs-tag">98.2</span></td>
+          <td class="r">₹24,869 Cr</td>
+          <td class="r">₹160 Cr</td>
+          <td class="r">0.6452%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AEROFLEX" data-close="419.45" data-ema10="398.97"
+          data-gap="5.1321" data-rs="98.2" data-tmc="5550.61"
+          data-tv="130.06" data-tvpct="2.3432"
+          data-indgrp="Industrial Products" data-ind="Iron & Steel Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAEROFLEX" target="_blank" rel="noopener">AEROFLEX</a></td>
+          <td class="r">₹419.45</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹398.97</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.13%</td>
+          <td class="r"><span class="rs-tag">98.2</span></td>
+          <td class="r">₹5,551 Cr</td>
+          <td class="r">₹130 Cr</td>
+          <td class="r">2.3432%</td>
+          <td>Industrial Products</td>
+          <td>Iron & Steel Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NATIONALUM" data-close="434.4" data-ema10="422.84"
+          data-gap="2.7347" data-rs="98.0" data-tmc="79783.28"
+          data-tv="614.32" data-tvpct="0.77"
+          data-indgrp="Non - Ferrous Metals" data-ind="Aluminium">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANATIONALUM" target="_blank" rel="noopener">NATIONALUM</a></td>
+          <td class="r">₹434.40</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹422.84</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.73%</td>
+          <td class="r"><span class="rs-tag">98.0</span></td>
+          <td class="r">₹79,783 Cr</td>
+          <td class="r">₹614 Cr</td>
+          <td class="r">0.7700%</td>
+          <td>Non - Ferrous Metals</td>
+          <td>Aluminium</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="DEEDEV" data-close="654.2" data-ema10="566.27"
+          data-gap="15.527" data-rs="97.9" data-tmc="4531.21"
+          data-tv="98.53" data-tvpct="2.1744"
+          data-indgrp="Industrial Manufacturing" data-ind="Industrial Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ADEEDEV" target="_blank" rel="noopener">DEEDEV</a></td>
+          <td class="r">₹654.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹566.27</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+15.53%</td>
+          <td class="r"><span class="rs-tag">97.9</span></td>
+          <td class="r">₹4,531 Cr</td>
+          <td class="r">₹99 Cr</td>
+          <td class="r">2.1744%</td>
+          <td>Industrial Manufacturing</td>
+          <td>Industrial Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="THANGAMAYL" data-close="4590.7" data-ema10="4084.29"
+          data-gap="12.3989" data-rs="97.76" data-tmc="14268.82"
+          data-tv="59.94" data-tvpct="0.42"
+          data-indgrp="Consumer Durables" data-ind="Gems, Jewellery And Watches">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ATHANGAMAYL" target="_blank" rel="noopener">THANGAMAYL</a></td>
+          <td class="r">₹4,590.70</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹4,084.29</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+12.40%</td>
+          <td class="r"><span class="rs-tag">97.8</span></td>
+          <td class="r">₹14,269 Cr</td>
+          <td class="r">₹60 Cr</td>
+          <td class="r">0.4200%</td>
+          <td>Consumer Durables</td>
+          <td>Gems, Jewellery And Watches</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NORBTEAEXP" data-close="82.85" data-ema10="81.18"
+          data-gap="2.0578" data-rs="97.71" data-tmc="128.78"
+          data-tv="0.05" data-tvpct="0.0377"
+          data-indgrp="Agricultural Food & other Products" data-ind="Tea & Coffee">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANORBTEAEXP" target="_blank" rel="noopener">NORBTEAEXP</a></td>
+          <td class="r">₹82.85</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹81.18</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.06%</td>
+          <td class="r"><span class="rs-tag">97.7</span></td>
+          <td class="r">₹129 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0377%</td>
+          <td>Agricultural Food & other Products</td>
+          <td>Tea & Coffee</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NETWEB" data-close="4782.8" data-ema10="4285.2"
+          data-gap="11.6119" data-rs="97.66" data-tmc="27233.59"
+          data-tv="821.85" data-tvpct="3.0178"
+          data-indgrp="IT - Services" data-ind="IT Enabled Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANETWEB" target="_blank" rel="noopener">NETWEB</a></td>
+          <td class="r">₹4,782.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹4,285.20</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+11.61%</td>
+          <td class="r"><span class="rs-tag">97.7</span></td>
+          <td class="r">₹27,234 Cr</td>
+          <td class="r">₹822 Cr</td>
+          <td class="r">3.0178%</td>
+          <td>IT - Services</td>
+          <td>IT Enabled Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MWL" data-close="380.5" data-ema10="372.92"
+          data-gap="2.0312" data-rs="97.61" data-tmc="1130.11"
+          data-tv="3.22" data-tvpct="0.2849"
+          data-indgrp="Metals & Minerals Trading" data-ind="Trading - Metals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMWL" target="_blank" rel="noopener">MWL</a></td>
+          <td class="r">₹380.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹372.92</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.03%</td>
+          <td class="r"><span class="rs-tag">97.6</span></td>
+          <td class="r">₹1,130 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">0.2849%</td>
+          <td>Metals & Minerals Trading</td>
+          <td>Trading - Metals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="PRECWIRE" data-close="428.45" data-ema10="423.73"
+          data-gap="1.1141" data-rs="97.56" data-tmc="7832.41"
+          data-tv="40.17" data-tvpct="0.5128"
+          data-indgrp="Industrial Products" data-ind="Aluminium, Copper & Zinc Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APRECWIRE" target="_blank" rel="noopener">PRECWIRE</a></td>
+          <td class="r">₹428.45</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹423.73</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.11%</td>
+          <td class="r"><span class="rs-tag">97.6</span></td>
+          <td class="r">₹7,832 Cr</td>
+          <td class="r">₹40 Cr</td>
+          <td class="r">0.5128%</td>
+          <td>Industrial Products</td>
+          <td>Aluminium, Copper & Zinc Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="IMFA" data-close="1461.5" data-ema10="1453.43"
+          data-gap="0.555" data-rs="97.51" data-tmc="7885.39"
+          data-tv="31.04" data-tvpct="0.3936"
+          data-indgrp="Ferrous Metals" data-ind="Ferro & Silica Manganese">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AIMFA" target="_blank" rel="noopener">IMFA</a></td>
+          <td class="r">₹1,461.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,453.43</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.56%</td>
+          <td class="r"><span class="rs-tag">97.5</span></td>
+          <td class="r">₹7,885 Cr</td>
+          <td class="r">₹31 Cr</td>
+          <td class="r">0.3936%</td>
+          <td>Ferrous Metals</td>
+          <td>Ferro & Silica Manganese</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="BELRISE" data-close="217.89" data-ema10="215.53"
+          data-gap="1.0966" data-rs="97.37" data-tmc="19389.58"
+          data-tv="109.55" data-tvpct="0.565"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ABELRISE" target="_blank" rel="noopener">BELRISE</a></td>
+          <td class="r">₹217.89</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹215.53</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.10%</td>
+          <td class="r"><span class="rs-tag">97.4</span></td>
+          <td class="r">₹19,390 Cr</td>
+          <td class="r">₹110 Cr</td>
+          <td class="r">0.5650%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MCLEODRUSS" data-close="75.32" data-ema10="73.27"
+          data-gap="2.793" data-rs="97.27" data-tmc="786.76"
+          data-tv="4.94" data-tvpct="0.628"
+          data-indgrp="Agricultural Food & other Products" data-ind="Tea & Coffee">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMCLEODRUSS" target="_blank" rel="noopener">MCLEODRUSS</a></td>
+          <td class="r">₹75.32</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹73.27</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.79%</td>
+          <td class="r"><span class="rs-tag">97.3</span></td>
+          <td class="r">₹787 Cr</td>
+          <td class="r">₹5 Cr</td>
+          <td class="r">0.6280%</td>
+          <td>Agricultural Food & other Products</td>
+          <td>Tea & Coffee</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AGIIL" data-close="381.6" data-ema10="370.74"
+          data-gap="2.9282" data-rs="97.22" data-tmc="4769.9"
+          data-tv="113.41" data-tvpct="2.3776"
+          data-indgrp="Realty" data-ind="Residential, Commercial Projects">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAGIIL" target="_blank" rel="noopener">AGIIL</a></td>
+          <td class="r">₹381.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹370.74</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.93%</td>
+          <td class="r"><span class="rs-tag">97.2</span></td>
+          <td class="r">₹4,770 Cr</td>
+          <td class="r">₹113 Cr</td>
+          <td class="r">2.3776%</td>
+          <td>Realty</td>
+          <td>Residential, Commercial Projects</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="LAURUSLABS" data-close="1382.6" data-ema10="1361.05"
+          data-gap="1.5837" data-rs="97.17" data-tmc="74658.56"
+          data-tv="273.39" data-tvpct="0.3662"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ALAURUSLABS" target="_blank" rel="noopener">LAURUSLABS</a></td>
+          <td class="r">₹1,382.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,361.05</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.58%</td>
+          <td class="r"><span class="rs-tag">97.2</span></td>
+          <td class="r">₹74,659 Cr</td>
+          <td class="r">₹273 Cr</td>
+          <td class="r">0.3662%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NGLFINE" data-close="2654.5" data-ema10="2644.38"
+          data-gap="0.3826" data-rs="97.12" data-tmc="1639.96"
+          data-tv="3.31" data-tvpct="0.202"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANGLFINE" target="_blank" rel="noopener">NGLFINE</a></td>
+          <td class="r">₹2,654.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,644.38</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.38%</td>
+          <td class="r"><span class="rs-tag">97.1</span></td>
+          <td class="r">₹1,640 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">0.2020%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ABSMARINE" data-close="286.9" data-ema10="271.33"
+          data-gap="5.7398" data-rs="97.03" data-tmc="807.7"
+          data-tv="2.99" data-tvpct="0.3706"
+          data-indgrp="Transport Services" data-ind="Shipping">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AABSMARINE" target="_blank" rel="noopener">ABSMARINE</a></td>
+          <td class="r">₹286.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹271.33</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.74%</td>
+          <td class="r"><span class="rs-tag">97.0</span></td>
+          <td class="r">₹808 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">0.3706%</td>
+          <td>Transport Services</td>
+          <td>Shipping</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="WELINV" data-close="1859.0" data-ema10="1833.87"
+          data-gap="1.3703" data-rs="96.98" data-tmc="681.61"
+          data-tv="0.15" data-tvpct="0.022"
+          data-indgrp="Finance" data-ind="Investment Company">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AWELINV" target="_blank" rel="noopener">WELINV</a></td>
+          <td class="r">₹1,859.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,833.87</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.37%</td>
+          <td class="r"><span class="rs-tag">97.0</span></td>
+          <td class="r">₹682 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0220%</td>
+          <td>Finance</td>
+          <td>Investment Company</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KIRLOSENG" data-close="1856.9" data-ema10="1808.22"
+          data-gap="2.6922" data-rs="96.88" data-tmc="26995.6"
+          data-tv="81.06" data-tvpct="0.3003"
+          data-indgrp="Industrial Products" data-ind="Compressors, Pumps & Diesel Engines">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKIRLOSENG" target="_blank" rel="noopener">KIRLOSENG</a></td>
+          <td class="r">₹1,856.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,808.22</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.69%</td>
+          <td class="r"><span class="rs-tag">96.9</span></td>
+          <td class="r">₹26,996 Cr</td>
+          <td class="r">₹81 Cr</td>
+          <td class="r">0.3003%</td>
+          <td>Industrial Products</td>
+          <td>Compressors, Pumps & Diesel Engines</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SANSERA" data-close="2953.3" data-ema10="2817.71"
+          data-gap="4.8121" data-rs="96.78" data-tmc="18408.52"
+          data-tv="80.19" data-tvpct="0.4356"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASANSERA" target="_blank" rel="noopener">SANSERA</a></td>
+          <td class="r">₹2,953.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,817.71</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.81%</td>
+          <td class="r"><span class="rs-tag">96.8</span></td>
+          <td class="r">₹18,409 Cr</td>
+          <td class="r">₹80 Cr</td>
+          <td class="r">0.4356%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SYRMA" data-close="1166.8" data-ema10="1079.05"
+          data-gap="8.1323" data-rs="96.73" data-tmc="22475.48"
+          data-tv="175.92" data-tvpct="0.7827"
+          data-indgrp="Industrial Manufacturing" data-ind="Industrial Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASYRMA" target="_blank" rel="noopener">SYRMA</a></td>
+          <td class="r">₹1,166.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,079.05</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+8.13%</td>
+          <td class="r"><span class="rs-tag">96.7</span></td>
+          <td class="r">₹22,475 Cr</td>
+          <td class="r">₹176 Cr</td>
+          <td class="r">0.7827%</td>
+          <td>Industrial Manufacturing</td>
+          <td>Industrial Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HFCL" data-close="189.94" data-ema10="169.54"
+          data-gap="12.0332" data-rs="96.64" data-tmc="29065.83"
+          data-tv="985.86" data-tvpct="3.3918"
+          data-indgrp="Telecom - Services" data-ind="Telecom - Infrastructure">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHFCL" target="_blank" rel="noopener">HFCL</a></td>
+          <td class="r">₹189.94</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹169.54</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+12.03%</td>
+          <td class="r"><span class="rs-tag">96.6</span></td>
+          <td class="r">₹29,066 Cr</td>
+          <td class="r">₹986 Cr</td>
+          <td class="r">3.3918%</td>
+          <td>Telecom - Services</td>
+          <td>Telecom - Infrastructure</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ADANIPOWER" data-close="235.93" data-ema10="235.11"
+          data-gap="0.3493" data-rs="96.59" data-tmc="454983.79"
+          data-tv="1117.28" data-tvpct="0.2456"
+          data-indgrp="Power" data-ind="Integrated Power Utilities">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AADANIPOWER" target="_blank" rel="noopener">ADANIPOWER</a></td>
+          <td class="r">₹235.93</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹235.11</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.35%</td>
+          <td class="r"><span class="rs-tag">96.6</span></td>
+          <td class="r">₹4.55L Cr</td>
+          <td class="r">₹1,117 Cr</td>
+          <td class="r">0.2456%</td>
+          <td>Power</td>
+          <td>Integrated Power Utilities</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="UNIVCABLES" data-close="1239.2" data-ema10="1126.54"
+          data-gap="10.0001" data-rs="96.54" data-tmc="4299.45"
+          data-tv="27.65" data-tvpct="0.6432"
+          data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AUNIVCABLES" target="_blank" rel="noopener">UNIVCABLES</a></td>
+          <td class="r">₹1,239.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,126.54</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+10.00%</td>
+          <td class="r"><span class="rs-tag">96.5</span></td>
+          <td class="r">₹4,299 Cr</td>
+          <td class="r">₹28 Cr</td>
+          <td class="r">0.6432%</td>
+          <td>Industrial Products</td>
+          <td>Cables - Electricals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NDLVENTURE" data-close="133.54" data-ema10="129.37"
+          data-gap="3.2264" data-rs="96.44" data-tmc="449.65"
+          data-tv="0.68" data-tvpct="0.1512"
+          data-indgrp="Finance" data-ind="Other Financial Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANDLVENTURE" target="_blank" rel="noopener">NDLVENTURE</a></td>
+          <td class="r">₹133.54</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹129.37</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.23%</td>
+          <td class="r"><span class="rs-tag">96.4</span></td>
+          <td class="r">₹450 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1512%</td>
+          <td>Finance</td>
+          <td>Other Financial Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="BBOX" data-close="1031.8" data-ema10="985.66"
+          data-gap="4.6806" data-rs="96.15" data-tmc="18324.69"
+          data-tv="103.55" data-tvpct="0.5651"
+          data-indgrp="IT - Services" data-ind="IT Enabled Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ABBOX" target="_blank" rel="noopener">BBOX</a></td>
+          <td class="r">₹1,031.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹985.66</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.68%</td>
+          <td class="r"><span class="rs-tag">96.1</span></td>
+          <td class="r">₹18,325 Cr</td>
+          <td class="r">₹104 Cr</td>
+          <td class="r">0.5651%</td>
+          <td>IT - Services</td>
+          <td>IT Enabled Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AIMTRON" data-close="1189.5" data-ema10="1141.73"
+          data-gap="4.1838" data-rs="96.0" data-tmc="1113.17"
+          data-tv="2.97" data-tvpct="0.2664"
+          data-indgrp="Industrial Manufacturing" data-ind="Industrial Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAIMTRON" target="_blank" rel="noopener">AIMTRON</a></td>
+          <td class="r">₹1,189.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,141.73</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.18%</td>
+          <td class="r"><span class="rs-tag">96.0</span></td>
+          <td class="r">₹1,113 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">0.2664%</td>
+          <td>Industrial Manufacturing</td>
+          <td>Industrial Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="IDEA" data-close="14.16" data-ema10="13.8"
+          data-gap="2.5738" data-rs="95.81" data-tmc="153413.74"
+          data-tv="742.33" data-tvpct="0.4839"
+          data-indgrp="Telecom - Services" data-ind="Telecom - Cellular & Fixed line services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AIDEA" target="_blank" rel="noopener">IDEA</a></td>
+          <td class="r">₹14.16</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹13.80</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.57%</td>
+          <td class="r"><span class="rs-tag">95.8</span></td>
+          <td class="r">₹1.53L Cr</td>
+          <td class="r">₹742 Cr</td>
+          <td class="r">0.4839%</td>
+          <td>Telecom - Services</td>
+          <td>Telecom - Cellular & Fixed line services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="INDSWFTLAB" data-close="162.1" data-ema10="146.29"
+          data-gap="10.8094" data-rs="95.56" data-tmc="1409.65"
+          data-tv="19.31" data-tvpct="1.3702"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AINDSWFTLAB" target="_blank" rel="noopener">INDSWFTLAB</a></td>
+          <td class="r">₹162.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹146.29</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+10.81%</td>
+          <td class="r"><span class="rs-tag">95.6</span></td>
+          <td class="r">₹1,410 Cr</td>
+          <td class="r">₹19 Cr</td>
+          <td class="r">1.3702%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HARDWYN" data-close="25.44" data-ema10="25.25"
+          data-gap="0.7423" data-rs="95.47" data-tmc="1242.58"
+          data-tv="7.79" data-tvpct="0.6265"
+          data-indgrp="Consumer Durables" data-ind="Furniture, Home Furnishing">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHARDWYN" target="_blank" rel="noopener">HARDWYN</a></td>
+          <td class="r">₹25.44</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹25.25</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.74%</td>
+          <td class="r"><span class="rs-tag">95.5</span></td>
+          <td class="r">₹1,243 Cr</td>
+          <td class="r">₹8 Cr</td>
+          <td class="r">0.6265%</td>
+          <td>Consumer Durables</td>
+          <td>Furniture, Home Furnishing</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="GOKULAGRO" data-close="233.86" data-ema10="231.26"
+          data-gap="1.1233" data-rs="95.27" data-tmc="6900.9"
+          data-tv="59.31" data-tvpct="0.8594"
+          data-indgrp="Agricultural Food & other Products" data-ind="Edible Oil">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AGOKULAGRO" target="_blank" rel="noopener">GOKULAGRO</a></td>
+          <td class="r">₹233.86</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹231.26</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.12%</td>
+          <td class="r"><span class="rs-tag">95.3</span></td>
+          <td class="r">₹6,901 Cr</td>
+          <td class="r">₹59 Cr</td>
+          <td class="r">0.8594%</td>
+          <td>Agricultural Food & other Products</td>
+          <td>Edible Oil</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SJS" data-close="2018.2" data-ema10="2014.05"
+          data-gap="0.2062" data-rs="95.22" data-tmc="6457.59"
+          data-tv="26.0" data-tvpct="0.4026"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASJS" target="_blank" rel="noopener">SJS</a></td>
+          <td class="r">₹2,018.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,014.05</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.21%</td>
+          <td class="r"><span class="rs-tag">95.2</span></td>
+          <td class="r">₹6,458 Cr</td>
+          <td class="r">₹26 Cr</td>
+          <td class="r">0.4026%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SOUTHWEST" data-close="265.0" data-ema10="257.04"
+          data-gap="3.0952" data-rs="95.12" data-tmc="790.5"
+          data-tv="9.79" data-tvpct="1.2381"
+          data-indgrp="Commercial Services & Supplies" data-ind="Diversified Commercial Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASOUTHWEST" target="_blank" rel="noopener">SOUTHWEST</a></td>
+          <td class="r">₹265.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹257.04</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.10%</td>
+          <td class="r"><span class="rs-tag">95.1</span></td>
+          <td class="r">₹790 Cr</td>
+          <td class="r">₹10 Cr</td>
+          <td class="r">1.2381%</td>
+          <td>Commercial Services & Supplies</td>
+          <td>Diversified Commercial Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ACCENTMIC" data-close="458.65" data-ema10="443.45"
+          data-gap="3.4285" data-rs="95.08" data-tmc="638.24"
+          data-tv="1.22" data-tvpct="0.1906"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AACCENTMIC" target="_blank" rel="noopener">ACCENTMIC</a></td>
+          <td class="r">₹458.65</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹443.45</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.43%</td>
+          <td class="r"><span class="rs-tag">95.1</span></td>
+          <td class="r">₹638 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1906%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MAHICKRA" data-close="240.0" data-ema10="235.57"
+          data-gap="1.8787" data-rs="95.03" data-tmc="88.41"
+          data-tv="0.07" data-tvpct="0.077"
+          data-indgrp="Chemicals & Petrochemicals" data-ind="Dyes And Pigments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMAHICKRA" target="_blank" rel="noopener">MAHICKRA</a></td>
+          <td class="r">₹240.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹235.57</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.88%</td>
+          <td class="r"><span class="rs-tag">95.0</span></td>
+          <td class="r">₹88 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0770%</td>
+          <td>Chemicals & Petrochemicals</td>
+          <td>Dyes And Pigments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="PARIN" data-close="686.05" data-ema10="673.65"
+          data-gap="1.8411" data-rs="94.98" data-tmc="257.33"
+          data-tv="0.51" data-tvpct="0.1993"
+          data-indgrp="Consumer Durables" data-ind="Furniture, Home Furnishing">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APARIN" target="_blank" rel="noopener">PARIN</a></td>
+          <td class="r">₹686.05</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹673.65</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.84%</td>
+          <td class="r"><span class="rs-tag">95.0</span></td>
+          <td class="r">₹257 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1993%</td>
+          <td>Consumer Durables</td>
+          <td>Furniture, Home Furnishing</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="CUMMINSIND" data-close="5708.0" data-ema10="5652.68"
+          data-gap="0.9786" data-rs="94.93" data-tmc="158225.76"
+          data-tv="400.21" data-tvpct="0.2529"
+          data-indgrp="Industrial Products" data-ind="Compressors, Pumps & Diesel Engines">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACUMMINSIND" target="_blank" rel="noopener">CUMMINSIND</a></td>
+          <td class="r">₹5,708.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹5,652.68</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.98%</td>
+          <td class="r"><span class="rs-tag">94.9</span></td>
+          <td class="r">₹1.58L Cr</td>
+          <td class="r">₹400 Cr</td>
+          <td class="r">0.2529%</td>
+          <td>Industrial Products</td>
+          <td>Compressors, Pumps & Diesel Engines</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KANDARP" data-close="153.0" data-ema10="150.95"
+          data-gap="1.3579" data-rs="94.83" data-tmc="32.39"
+          data-tv="0.09" data-tvpct="0.2686"
+          data-indgrp="Commercial Services & Supplies" data-ind="Business Process Outsourcing (BPO)/ Knowledge Process Outsourcing (KPO)">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKANDARP" target="_blank" rel="noopener">KANDARP</a></td>
+          <td class="r">₹153.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹150.95</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.36%</td>
+          <td class="r"><span class="rs-tag">94.8</span></td>
+          <td class="r">₹32 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.2686%</td>
+          <td>Commercial Services & Supplies</td>
+          <td>Business Process Outsourcing (BPO)/ Knowledge Process Outsourcing (KPO)</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="UNIPARTS" data-close="599.2" data-ema10="585.63"
+          data-gap="2.3172" data-rs="94.78" data-tmc="2702.46"
+          data-tv="9.68" data-tvpct="0.3583"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AUNIPARTS" target="_blank" rel="noopener">UNIPARTS</a></td>
+          <td class="r">₹599.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹585.63</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.32%</td>
+          <td class="r"><span class="rs-tag">94.8</span></td>
+          <td class="r">₹2,702 Cr</td>
+          <td class="r">₹10 Cr</td>
+          <td class="r">0.3583%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="RPTECH" data-close="554.2" data-ema10="540.04"
+          data-gap="2.6213" data-rs="94.73" data-tmc="3652.16"
+          data-tv="11.09" data-tvpct="0.3037"
+          data-indgrp="IT - Hardware" data-ind="Computers Hardware & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ARPTECH" target="_blank" rel="noopener">RPTECH</a></td>
+          <td class="r">₹554.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹540.04</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.62%</td>
+          <td class="r"><span class="rs-tag">94.7</span></td>
+          <td class="r">₹3,652 Cr</td>
+          <td class="r">₹11 Cr</td>
+          <td class="r">0.3037%</td>
+          <td>IT - Hardware</td>
+          <td>Computers Hardware & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HINDALCO" data-close="1146.3" data-ema10="1121.12"
+          data-gap="2.2456" data-rs="94.69" data-tmc="256330.25"
+          data-tv="718.53" data-tvpct="0.2803"
+          data-indgrp="Non - Ferrous Metals" data-ind="Aluminium">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHINDALCO" target="_blank" rel="noopener">HINDALCO</a></td>
+          <td class="r">₹1,146.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,121.12</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.25%</td>
+          <td class="r"><span class="rs-tag">94.7</span></td>
+          <td class="r">₹2.56L Cr</td>
+          <td class="r">₹719 Cr</td>
+          <td class="r">0.2803%</td>
+          <td>Non - Ferrous Metals</td>
+          <td>Aluminium</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AVALON" data-close="1511.9" data-ema10="1462.2"
+          data-gap="3.3989" data-rs="94.44" data-tmc="10097.63"
+          data-tv="66.57" data-tvpct="0.6592"
+          data-indgrp="Electrical Equipment" data-ind="Other Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAVALON" target="_blank" rel="noopener">AVALON</a></td>
+          <td class="r">₹1,511.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,462.20</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.40%</td>
+          <td class="r"><span class="rs-tag">94.4</span></td>
+          <td class="r">₹10,098 Cr</td>
+          <td class="r">₹67 Cr</td>
+          <td class="r">0.6592%</td>
+          <td>Electrical Equipment</td>
+          <td>Other Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ADANIENSOL" data-close="1530.6" data-ema10="1467.38"
+          data-gap="4.308" data-rs="94.39" data-tmc="183868.32"
+          data-tv="481.19" data-tvpct="0.2617"
+          data-indgrp="Power" data-ind="Power Distribution">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AADANIENSOL" target="_blank" rel="noopener">ADANIENSOL</a></td>
+          <td class="r">₹1,530.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,467.38</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.31%</td>
+          <td class="r"><span class="rs-tag">94.4</span></td>
+          <td class="r">₹1.84L Cr</td>
+          <td class="r">₹481 Cr</td>
+          <td class="r">0.2617%</td>
+          <td>Power</td>
+          <td>Power Distribution</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="STYLAMIND" data-close="2957.9" data-ema10="2822.96"
+          data-gap="4.78" data-rs="94.34" data-tmc="5016.22"
+          data-tv="17.44" data-tvpct="0.3476"
+          data-indgrp="Consumer Durables" data-ind="Plywood Boards/ Laminates">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASTYLAMIND" target="_blank" rel="noopener">STYLAMIND</a></td>
+          <td class="r">₹2,957.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,822.96</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.78%</td>
+          <td class="r"><span class="rs-tag">94.3</span></td>
+          <td class="r">₹5,016 Cr</td>
+          <td class="r">₹17 Cr</td>
+          <td class="r">0.3476%</td>
+          <td>Consumer Durables</td>
+          <td>Plywood Boards/ Laminates</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="TFCILTD" data-close="75.5" data-ema10="74.1"
+          data-gap="1.8935" data-rs="94.15" data-tmc="3495.48"
+          data-tv="42.39" data-tvpct="1.2128"
+          data-indgrp="Finance" data-ind="Financial Institution">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ATFCILTD" target="_blank" rel="noopener">TFCILTD</a></td>
+          <td class="r">₹75.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹74.10</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.89%</td>
+          <td class="r"><span class="rs-tag">94.1</span></td>
+          <td class="r">₹3,495 Cr</td>
+          <td class="r">₹42 Cr</td>
+          <td class="r">1.2128%</td>
+          <td>Finance</td>
+          <td>Financial Institution</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="TMB" data-close="739.75" data-ema10="701.91"
+          data-gap="5.3904" data-rs="93.95" data-tmc="11714.05"
+          data-tv="36.6" data-tvpct="0.3125"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ATMB" target="_blank" rel="noopener">TMB</a></td>
+          <td class="r">₹739.75</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹701.91</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.39%</td>
+          <td class="r"><span class="rs-tag">94.0</span></td>
+          <td class="r">₹11,714 Cr</td>
+          <td class="r">₹37 Cr</td>
+          <td class="r">0.3125%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MBAPL" data-close="543.25" data-ema10="535.87"
+          data-gap="1.3774" data-rs="93.86" data-tmc="4760.33"
+          data-tv="15.8" data-tvpct="0.3318"
+          data-indgrp="Fertilizers & Agrochemicals" data-ind="Fertilizers">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMBAPL" target="_blank" rel="noopener">MBAPL</a></td>
+          <td class="r">₹543.25</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹535.87</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.38%</td>
+          <td class="r"><span class="rs-tag">93.9</span></td>
+          <td class="r">₹4,760 Cr</td>
+          <td class="r">₹16 Cr</td>
+          <td class="r">0.3318%</td>
+          <td>Fertilizers & Agrochemicals</td>
+          <td>Fertilizers</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SEAMECLTD" data-close="1643.3" data-ema10="1606.02"
+          data-gap="2.3215" data-rs="93.76" data-tmc="4192.72"
+          data-tv="16.0" data-tvpct="0.3816"
+          data-indgrp="Transport Services" data-ind="Shipping">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASEAMECLTD" target="_blank" rel="noopener">SEAMECLTD</a></td>
+          <td class="r">₹1,643.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,606.02</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.32%</td>
+          <td class="r"><span class="rs-tag">93.8</span></td>
+          <td class="r">₹4,193 Cr</td>
+          <td class="r">₹16 Cr</td>
+          <td class="r">0.3816%</td>
+          <td>Transport Services</td>
+          <td>Shipping</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="GLOBAL" data-close="102.9" data-ema10="102.81"
+          data-gap="0.0921" data-rs="93.71" data-tmc="523.78"
+          data-tv="1.27" data-tvpct="0.2432"
+          data-indgrp="Other Consumer Services" data-ind="Education">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AGLOBAL" target="_blank" rel="noopener">GLOBAL</a></td>
+          <td class="r">₹102.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹102.81</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.09%</td>
+          <td class="r"><span class="rs-tag">93.7</span></td>
+          <td class="r">₹524 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.2432%</td>
+          <td>Other Consumer Services</td>
+          <td>Education</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="PAISALO" data-close="52.69" data-ema10="50.52"
+          data-gap="4.303" data-rs="93.66" data-tmc="4792.27"
+          data-tv="57.87" data-tvpct="1.2076"
+          data-indgrp="Finance" data-ind="Non Banking Financial Company (NBFC)">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APAISALO" target="_blank" rel="noopener">PAISALO</a></td>
+          <td class="r">₹52.69</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹50.52</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.30%</td>
+          <td class="r"><span class="rs-tag">93.7</span></td>
+          <td class="r">₹4,792 Cr</td>
+          <td class="r">₹58 Cr</td>
+          <td class="r">1.2076%</td>
+          <td>Finance</td>
+          <td>Non Banking Financial Company (NBFC)</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="APARINDS" data-close="13270.0" data-ema10="12952.49"
+          data-gap="2.4514" data-rs="93.61" data-tmc="53311.21"
+          data-tv="160.04" data-tvpct="0.3002"
+          data-indgrp="Electrical Equipment" data-ind="Other Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAPARINDS" target="_blank" rel="noopener">APARINDS</a></td>
+          <td class="r">₹13,270.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹12,952.49</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.45%</td>
+          <td class="r"><span class="rs-tag">93.6</span></td>
+          <td class="r">₹53,311 Cr</td>
+          <td class="r">₹160 Cr</td>
+          <td class="r">0.3002%</td>
+          <td>Electrical Equipment</td>
+          <td>Other Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SHAILY" data-close="3038.0" data-ema10="2856.28"
+          data-gap="6.362" data-rs="93.37" data-tmc="13973.36"
+          data-tv="156.12" data-tvpct="1.1173"
+          data-indgrp="Industrial Products" data-ind="Plastic Products - Industrial">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASHAILY" target="_blank" rel="noopener">SHAILY</a></td>
+          <td class="r">₹3,038.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,856.28</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+6.36%</td>
+          <td class="r"><span class="rs-tag">93.4</span></td>
+          <td class="r">₹13,973 Cr</td>
+          <td class="r">₹156 Cr</td>
+          <td class="r">1.1173%</td>
+          <td>Industrial Products</td>
+          <td>Plastic Products - Industrial</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SAAKSHI" data-close="236.0" data-ema10="235.23"
+          data-gap="0.3286" data-rs="93.08" data-tmc="479.45"
+          data-tv="0.55" data-tvpct="0.115"
+          data-indgrp="Electrical Equipment" data-ind="Other Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASAAKSHI" target="_blank" rel="noopener">SAAKSHI</a></td>
+          <td class="r">₹236.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹235.23</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.33%</td>
+          <td class="r"><span class="rs-tag">93.1</span></td>
+          <td class="r">₹479 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1150%</td>
+          <td>Electrical Equipment</td>
+          <td>Other Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SPORTKING" data-close="190.64" data-ema10="172.22"
+          data-gap="10.6955" data-rs="92.98" data-tmc="2426.29"
+          data-tv="9.5" data-tvpct="0.3914"
+          data-indgrp="Textiles & Apparels" data-ind="Other Textile Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASPORTKING" target="_blank" rel="noopener">SPORTKING</a></td>
+          <td class="r">₹190.64</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹172.22</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+10.70%</td>
+          <td class="r"><span class="rs-tag">93.0</span></td>
+          <td class="r">₹2,426 Cr</td>
+          <td class="r">₹10 Cr</td>
+          <td class="r">0.3914%</td>
+          <td>Textiles & Apparels</td>
+          <td>Other Textile Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="CHENNPETRO" data-close="1141.6" data-ema10="1064.61"
+          data-gap="7.2315" data-rs="92.69" data-tmc="16999.73"
+          data-tv="291.62" data-tvpct="1.7154"
+          data-indgrp="Petroleum Products" data-ind="Refineries & Marketing">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACHENNPETRO" target="_blank" rel="noopener">CHENNPETRO</a></td>
+          <td class="r">₹1,141.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,064.61</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+7.23%</td>
+          <td class="r"><span class="rs-tag">92.7</span></td>
+          <td class="r">₹17,000 Cr</td>
+          <td class="r">₹292 Cr</td>
+          <td class="r">1.7154%</td>
+          <td>Petroleum Products</td>
+          <td>Refineries & Marketing</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SAIL" data-close="205.85" data-ema10="202.13"
+          data-gap="1.8392" data-rs="92.64" data-tmc="85026.87"
+          data-tv="546.8" data-tvpct="0.6431"
+          data-indgrp="Ferrous Metals" data-ind="Iron & Steel">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASAIL" target="_blank" rel="noopener">SAIL</a></td>
+          <td class="r">₹205.85</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹202.13</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.84%</td>
+          <td class="r"><span class="rs-tag">92.6</span></td>
+          <td class="r">₹85,027 Cr</td>
+          <td class="r">₹547 Cr</td>
+          <td class="r">0.6431%</td>
+          <td>Ferrous Metals</td>
+          <td>Iron & Steel</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KARURVYSYA" data-close="293.05" data-ema10="291.16"
+          data-gap="0.6505" data-rs="92.59" data-tmc="28326.77"
+          data-tv="100.61" data-tvpct="0.3552"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKARURVYSYA" target="_blank" rel="noopener">KARURVYSYA</a></td>
+          <td class="r">₹293.05</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹291.16</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.65%</td>
+          <td class="r"><span class="rs-tag">92.6</span></td>
+          <td class="r">₹28,327 Cr</td>
+          <td class="r">₹101 Cr</td>
+          <td class="r">0.3552%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="RBLBANK" data-close="344.15" data-ema10="340.89"
+          data-gap="0.9557" data-rs="92.54" data-tmc="21307.63"
+          data-tv="179.37" data-tvpct="0.8418"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ARBLBANK" target="_blank" rel="noopener">RBLBANK</a></td>
+          <td class="r">₹344.15</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹340.89</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.96%</td>
+          <td class="r"><span class="rs-tag">92.5</span></td>
+          <td class="r">₹21,308 Cr</td>
+          <td class="r">₹179 Cr</td>
+          <td class="r">0.8418%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="USHAMART" data-close="492.0" data-ema10="489.04"
+          data-gap="0.6062" data-rs="92.49" data-tmc="14976.49"
+          data-tv="32.74" data-tvpct="0.2186"
+          data-indgrp="Industrial Products" data-ind="Iron & Steel Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AUSHAMART" target="_blank" rel="noopener">USHAMART</a></td>
+          <td class="r">₹492.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹489.04</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.61%</td>
+          <td class="r"><span class="rs-tag">92.5</span></td>
+          <td class="r">₹14,976 Cr</td>
+          <td class="r">₹33 Cr</td>
+          <td class="r">0.2186%</td>
+          <td>Industrial Products</td>
+          <td>Iron & Steel Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="DREDGECORP" data-close="1223.3" data-ema10="1111.95"
+          data-gap="10.0141" data-rs="92.44" data-tmc="3425.24"
+          data-tv="60.28" data-tvpct="1.76"
+          data-indgrp="Engineering Services" data-ind="Dredging">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ADREDGECORP" target="_blank" rel="noopener">DREDGECORP</a></td>
+          <td class="r">₹1,223.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,111.95</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+10.01%</td>
+          <td class="r"><span class="rs-tag">92.4</span></td>
+          <td class="r">₹3,425 Cr</td>
+          <td class="r">₹60 Cr</td>
+          <td class="r">1.7600%</td>
+          <td>Engineering Services</td>
+          <td>Dredging</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KINGFA" data-close="5340.0" data-ema10="5327.88"
+          data-gap="0.2275" data-rs="92.25" data-tmc="7236.44"
+          data-tv="4.14" data-tvpct="0.0572"
+          data-indgrp="Industrial Products" data-ind="Plastic Products - Industrial">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKINGFA" target="_blank" rel="noopener">KINGFA</a></td>
+          <td class="r">₹5,340.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹5,327.88</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.23%</td>
+          <td class="r"><span class="rs-tag">92.2</span></td>
+          <td class="r">₹7,236 Cr</td>
+          <td class="r">₹4 Cr</td>
+          <td class="r">0.0572%</td>
+          <td>Industrial Products</td>
+          <td>Plastic Products - Industrial</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="POLYCAB" data-close="9531.5" data-ema10="9392.47"
+          data-gap="1.4802" data-rs="92.05" data-tmc="143497.22"
+          data-tv="461.92" data-tvpct="0.3219"
+          data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APOLYCAB" target="_blank" rel="noopener">POLYCAB</a></td>
+          <td class="r">₹9,531.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹9,392.47</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.48%</td>
+          <td class="r"><span class="rs-tag">92.1</span></td>
+          <td class="r">₹1.43L Cr</td>
+          <td class="r">₹462 Cr</td>
+          <td class="r">0.3219%</td>
+          <td>Industrial Products</td>
+          <td>Cables - Electricals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ANTELOPUS" data-close="854.2" data-ema10="776.44"
+          data-gap="10.0145" data-rs="91.96" data-tmc="3003.57"
+          data-tv="24.49" data-tvpct="0.8154"
+          data-indgrp="Oil" data-ind="Oil Exploration & Production">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AANTELOPUS" target="_blank" rel="noopener">ANTELOPUS</a></td>
+          <td class="r">₹854.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹776.44</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+10.01%</td>
+          <td class="r"><span class="rs-tag">92.0</span></td>
+          <td class="r">₹3,004 Cr</td>
+          <td class="r">₹24 Cr</td>
+          <td class="r">0.8154%</td>
+          <td>Oil</td>
+          <td>Oil Exploration & Production</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="UFBL" data-close="487.2" data-ema10="460.26"
+          data-gap="5.8534" data-rs="91.81" data-tmc="1904.29"
+          data-tv="17.42" data-tvpct="0.9146"
+          data-indgrp="Leisure Services" data-ind="Restaurants">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AUFBL" target="_blank" rel="noopener">UFBL</a></td>
+          <td class="r">₹487.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹460.26</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.85%</td>
+          <td class="r"><span class="rs-tag">91.8</span></td>
+          <td class="r">₹1,904 Cr</td>
+          <td class="r">₹17 Cr</td>
+          <td class="r">0.9146%</td>
+          <td>Leisure Services</td>
+          <td>Restaurants</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SETCO" data-close="15.93" data-ema10="14.88"
+          data-gap="7.0874" data-rs="91.76" data-tmc="213.63"
+          data-tv="0.38" data-tvpct="0.1783"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASETCO" target="_blank" rel="noopener">SETCO</a></td>
+          <td class="r">₹15.93</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹14.88</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+7.09%</td>
+          <td class="r"><span class="rs-tag">91.8</span></td>
+          <td class="r">₹214 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.1783%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="CRAFTSMAN" data-close="8979.0" data-ema10="8755.79"
+          data-gap="2.5493" data-rs="91.66" data-tmc="21419.93"
+          data-tv="104.17" data-tvpct="0.4863"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACRAFTSMAN" target="_blank" rel="noopener">CRAFTSMAN</a></td>
+          <td class="r">₹8,979.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹8,755.79</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.55%</td>
+          <td class="r"><span class="rs-tag">91.7</span></td>
+          <td class="r">₹21,420 Cr</td>
+          <td class="r">₹104 Cr</td>
+          <td class="r">0.4863%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="WELCORP" data-close="1386.8" data-ema10="1351.43"
+          data-gap="2.6175" data-rs="91.37" data-tmc="36570.46"
+          data-tv="120.42" data-tvpct="0.3293"
+          data-indgrp="Industrial Products" data-ind="Iron & Steel Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AWELCORP" target="_blank" rel="noopener">WELCORP</a></td>
+          <td class="r">₹1,386.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,351.43</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.62%</td>
+          <td class="r"><span class="rs-tag">91.4</span></td>
+          <td class="r">₹36,570 Cr</td>
+          <td class="r">₹120 Cr</td>
+          <td class="r">0.3293%</td>
+          <td>Industrial Products</td>
+          <td>Iron & Steel Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="RRKABEL" data-close="2023.8" data-ema10="1985.46"
+          data-gap="1.9311" data-rs="91.22" data-tmc="22890.29"
+          data-tv="107.53" data-tvpct="0.4698"
+          data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ARRKABEL" target="_blank" rel="noopener">RRKABEL</a></td>
+          <td class="r">₹2,023.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,985.46</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.93%</td>
+          <td class="r"><span class="rs-tag">91.2</span></td>
+          <td class="r">₹22,890 Cr</td>
+          <td class="r">₹108 Cr</td>
+          <td class="r">0.4698%</td>
+          <td>Industrial Products</td>
+          <td>Cables - Electricals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="PROV" data-close="1600.0" data-ema10="1576.8"
+          data-gap="1.4715" data-rs="91.18" data-tmc="375.69"
+          data-tv="0.08" data-tvpct="0.0211"
+          data-indgrp="Food Products" data-ind="Other Food Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APROV" target="_blank" rel="noopener">PROV</a></td>
+          <td class="r">₹1,600.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,576.80</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.47%</td>
+          <td class="r"><span class="rs-tag">91.2</span></td>
+          <td class="r">₹376 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0211%</td>
+          <td>Food Products</td>
+          <td>Other Food Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MUFIN" data-close="122.5" data-ema10="121.71"
+          data-gap="0.6512" data-rs="91.03" data-tmc="2427.49"
+          data-tv="26.65" data-tvpct="1.0977"
+          data-indgrp="Finance" data-ind="Non Banking Financial Company (NBFC)">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMUFIN" target="_blank" rel="noopener">MUFIN</a></td>
+          <td class="r">₹122.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹121.71</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.65%</td>
+          <td class="r"><span class="rs-tag">91.0</span></td>
+          <td class="r">₹2,427 Cr</td>
+          <td class="r">₹27 Cr</td>
+          <td class="r">1.0977%</td>
+          <td>Finance</td>
+          <td>Non Banking Financial Company (NBFC)</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="IDEAFORGE" data-close="828.9" data-ema10="816.3"
+          data-gap="1.5433" data-rs="90.98" data-tmc="3596.51"
+          data-tv="170.43" data-tvpct="4.7389"
+          data-indgrp="Aerospace & Defense" data-ind="Aerospace & Defense">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AIDEAFORGE" target="_blank" rel="noopener">IDEAFORGE</a></td>
+          <td class="r">₹828.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹816.30</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.54%</td>
+          <td class="r"><span class="rs-tag">91.0</span></td>
+          <td class="r">₹3,597 Cr</td>
+          <td class="r">₹170 Cr</td>
+          <td class="r">4.7389%</td>
+          <td>Aerospace & Defense</td>
+          <td>Aerospace & Defense</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NAM-INDIA" data-close="1089.9" data-ema10="1089.66"
+          data-gap="0.0218" data-rs="90.74" data-tmc="69588.26"
+          data-tv="117.89" data-tvpct="0.1694"
+          data-indgrp="Capital Markets" data-ind="Asset Management Company">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANAM-INDIA" target="_blank" rel="noopener">NAM-INDIA</a></td>
+          <td class="r">₹1,089.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,089.66</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.02%</td>
+          <td class="r"><span class="rs-tag">90.7</span></td>
+          <td class="r">₹69,588 Cr</td>
+          <td class="r">₹118 Cr</td>
+          <td class="r">0.1694%</td>
+          <td>Capital Markets</td>
+          <td>Asset Management Company</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NEULANDLAB" data-close="16909.0" data-ema10="16880.03"
+          data-gap="0.1716" data-rs="90.54" data-tmc="21694.06"
+          data-tv="90.82" data-tvpct="0.4186"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANEULANDLAB" target="_blank" rel="noopener">NEULANDLAB</a></td>
+          <td class="r">₹16,909.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹16,880.03</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.17%</td>
+          <td class="r"><span class="rs-tag">90.5</span></td>
+          <td class="r">₹21,694 Cr</td>
+          <td class="r">₹91 Cr</td>
+          <td class="r">0.4186%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="DBOL" data-close="112.72" data-ema10="108.74"
+          data-gap="3.6616" data-rs="90.39" data-tmc="741.74"
+          data-tv="2.84" data-tvpct="0.3823"
+          data-indgrp="Agricultural Food & other Products" data-ind="Sugar">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ADBOL" target="_blank" rel="noopener">DBOL</a></td>
+          <td class="r">₹112.72</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹108.74</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.66%</td>
+          <td class="r"><span class="rs-tag">90.4</span></td>
+          <td class="r">₹742 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">0.3823%</td>
+          <td>Agricultural Food & other Products</td>
+          <td>Sugar</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KERNEX" data-close="1804.7" data-ema10="1592.38"
+          data-gap="13.3333" data-rs="90.3" data-tmc="3032.33"
+          data-tv="48.18" data-tvpct="1.5888"
+          data-indgrp="Transport Services" data-ind="Transport Related Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKERNEX" target="_blank" rel="noopener">KERNEX</a></td>
+          <td class="r">₹1,804.70</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,592.38</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+13.33%</td>
+          <td class="r"><span class="rs-tag">90.3</span></td>
+          <td class="r">₹3,032 Cr</td>
+          <td class="r">₹48 Cr</td>
+          <td class="r">1.5888%</td>
+          <td>Transport Services</td>
+          <td>Transport Related Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HAPPYFORGE" data-close="1409.0" data-ema10="1403.0"
+          data-gap="0.428" data-rs="90.2" data-tmc="13293.98"
+          data-tv="11.9" data-tvpct="0.0895"
+          data-indgrp="Industrial Products" data-ind="Castings & Forgings">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHAPPYFORGE" target="_blank" rel="noopener">HAPPYFORGE</a></td>
+          <td class="r">₹1,409.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,403.00</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.43%</td>
+          <td class="r"><span class="rs-tag">90.2</span></td>
+          <td class="r">₹13,294 Cr</td>
+          <td class="r">₹12 Cr</td>
+          <td class="r">0.0895%</td>
+          <td>Industrial Products</td>
+          <td>Castings & Forgings</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="GRANULES" data-close="777.55" data-ema10="768.03"
+          data-gap="1.2393" data-rs="90.05" data-tmc="19267.45"
+          data-tv="101.12" data-tvpct="0.5248"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AGRANULES" target="_blank" rel="noopener">GRANULES</a></td>
+          <td class="r">₹777.55</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹768.03</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.24%</td>
+          <td class="r"><span class="rs-tag">90.1</span></td>
+          <td class="r">₹19,267 Cr</td>
+          <td class="r">₹101 Cr</td>
+          <td class="r">0.5248%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NLCINDIA" data-close="349.1" data-ema10="345.18"
+          data-gap="1.1355" data-rs="89.81" data-tmc="48407.48"
+          data-tv="214.75" data-tvpct="0.4436"
+          data-indgrp="Power" data-ind="Power Generation">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANLCINDIA" target="_blank" rel="noopener">NLCINDIA</a></td>
+          <td class="r">₹349.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹345.18</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.14%</td>
+          <td class="r"><span class="rs-tag">89.8</span></td>
+          <td class="r">₹48,407 Cr</td>
+          <td class="r">₹215 Cr</td>
+          <td class="r">0.4436%</td>
+          <td>Power</td>
+          <td>Power Generation</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="FEDERALBNK" data-close="293.05" data-ema10="289.05"
+          data-gap="1.3854" data-rs="89.52" data-tmc="72217.42"
+          data-tv="357.61" data-tvpct="0.4952"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AFEDERALBNK" target="_blank" rel="noopener">FEDERALBNK</a></td>
+          <td class="r">₹293.05</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹289.05</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.39%</td>
+          <td class="r"><span class="rs-tag">89.5</span></td>
+          <td class="r">₹72,217 Cr</td>
+          <td class="r">₹358 Cr</td>
+          <td class="r">0.4952%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SILGO" data-close="82.82" data-ema10="80.49"
+          data-gap="2.8992" data-rs="89.42" data-tmc="216.71"
+          data-tv="3.01" data-tvpct="1.3897"
+          data-indgrp="Consumer Durables" data-ind="Gems, Jewellery And Watches">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASILGO" target="_blank" rel="noopener">SILGO</a></td>
+          <td class="r">₹82.82</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹80.49</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.90%</td>
+          <td class="r"><span class="rs-tag">89.4</span></td>
+          <td class="r">₹217 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">1.3897%</td>
+          <td>Consumer Durables</td>
+          <td>Gems, Jewellery And Watches</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KEI" data-close="5261.5" data-ema10="5232.41"
+          data-gap="0.5559" data-rs="89.18" data-tmc="50300.25"
+          data-tv="248.54" data-tvpct="0.4941"
+          data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKEI" target="_blank" rel="noopener">KEI</a></td>
+          <td class="r">₹5,261.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹5,232.41</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.56%</td>
+          <td class="r"><span class="rs-tag">89.2</span></td>
+          <td class="r">₹50,300 Cr</td>
+          <td class="r">₹249 Cr</td>
+          <td class="r">0.4941%</td>
+          <td>Industrial Products</td>
+          <td>Cables - Electricals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="J&KBANK" data-close="141.92" data-ema10="140.22"
+          data-gap="1.2094" data-rs="89.13" data-tmc="15627.98"
+          data-tv="81.94" data-tvpct="0.5243"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AJ&KBANK" target="_blank" rel="noopener">J&KBANK</a></td>
+          <td class="r">₹141.92</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹140.22</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.21%</td>
+          <td class="r"><span class="rs-tag">89.1</span></td>
+          <td class="r">₹15,628 Cr</td>
+          <td class="r">₹82 Cr</td>
+          <td class="r">0.5243%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="DIVGIITTS" data-close="789.45" data-ema10="760.53"
+          data-gap="3.8032" data-rs="89.08" data-tmc="2414.37"
+          data-tv="4.38" data-tvpct="0.1815"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ADIVGIITTS" target="_blank" rel="noopener">DIVGIITTS</a></td>
+          <td class="r">₹789.45</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹760.53</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.80%</td>
+          <td class="r"><span class="rs-tag">89.1</span></td>
+          <td class="r">₹2,414 Cr</td>
+          <td class="r">₹4 Cr</td>
+          <td class="r">0.1815%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="THERMAX" data-close="4969.7" data-ema10="4699.74"
+          data-gap="5.7443" data-rs="89.03" data-tmc="55983.01"
+          data-tv="155.21" data-tvpct="0.2772"
+          data-indgrp="Electrical Equipment" data-ind="Heavy Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ATHERMAX" target="_blank" rel="noopener">THERMAX</a></td>
+          <td class="r">₹4,969.70</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹4,699.74</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.74%</td>
+          <td class="r"><span class="rs-tag">89.0</span></td>
+          <td class="r">₹55,983 Cr</td>
+          <td class="r">₹155 Cr</td>
+          <td class="r">0.2772%</td>
+          <td>Electrical Equipment</td>
+          <td>Heavy Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KRISHNADEF" data-close="1148.8" data-ema10="1128.52"
+          data-gap="1.7974" data-rs="88.98" data-tmc="1615.1"
+          data-tv="18.36" data-tvpct="1.1366"
+          data-indgrp="Aerospace & Defense" data-ind="Aerospace & Defense">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKRISHNADEF" target="_blank" rel="noopener">KRISHNADEF</a></td>
+          <td class="r">₹1,148.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,128.52</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.80%</td>
+          <td class="r"><span class="rs-tag">89.0</span></td>
+          <td class="r">₹1,615 Cr</td>
+          <td class="r">₹18 Cr</td>
+          <td class="r">1.1366%</td>
+          <td>Aerospace & Defense</td>
+          <td>Aerospace & Defense</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SHRIPISTON" data-close="3452.1" data-ema10="3358.69"
+          data-gap="2.7811" data-rs="88.79" data-tmc="15206.44"
+          data-tv="30.81" data-tvpct="0.2026"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASHRIPISTON" target="_blank" rel="noopener">SHRIPISTON</a></td>
+          <td class="r">₹3,452.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹3,358.69</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.78%</td>
+          <td class="r"><span class="rs-tag">88.8</span></td>
+          <td class="r">₹15,206 Cr</td>
+          <td class="r">₹31 Cr</td>
+          <td class="r">0.2026%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SATIN" data-close="231.12" data-ema10="221.08"
+          data-gap="4.5399" data-rs="88.74" data-tmc="2542.04"
+          data-tv="21.14" data-tvpct="0.8318"
+          data-indgrp="Finance" data-ind="Microfinance Institutions">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASATIN" target="_blank" rel="noopener">SATIN</a></td>
+          <td class="r">₹231.12</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹221.08</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.54%</td>
+          <td class="r"><span class="rs-tag">88.7</span></td>
+          <td class="r">₹2,542 Cr</td>
+          <td class="r">₹21 Cr</td>
+          <td class="r">0.8318%</td>
+          <td>Finance</td>
+          <td>Microfinance Institutions</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MOTHERSON" data-close="144.89" data-ema10="139.66"
+          data-gap="3.7438" data-rs="88.64" data-tmc="152587.01"
+          data-tv="348.49" data-tvpct="0.2284"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMOTHERSON" target="_blank" rel="noopener">MOTHERSON</a></td>
+          <td class="r">₹144.89</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹139.66</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.74%</td>
+          <td class="r"><span class="rs-tag">88.6</span></td>
+          <td class="r">₹1.53L Cr</td>
+          <td class="r">₹348 Cr</td>
+          <td class="r">0.2284%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="KRN" data-close="1104.6" data-ema10="1103.94"
+          data-gap="0.0596" data-rs="88.49" data-tmc="6865.82"
+          data-tv="100.59" data-tvpct="1.4651"
+          data-indgrp="Industrial Products" data-ind="Other Industrial Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AKRN" target="_blank" rel="noopener">KRN</a></td>
+          <td class="r">₹1,104.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,103.94</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.06%</td>
+          <td class="r"><span class="rs-tag">88.5</span></td>
+          <td class="r">₹6,866 Cr</td>
+          <td class="r">₹101 Cr</td>
+          <td class="r">1.4651%</td>
+          <td>Industrial Products</td>
+          <td>Other Industrial Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SKYGOLD" data-close="559.7" data-ema10="502.83"
+          data-gap="11.309" data-rs="88.4" data-tmc="8668.29"
+          data-tv="63.97" data-tvpct="0.7379"
+          data-indgrp="Consumer Durables" data-ind="Gems, Jewellery And Watches">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASKYGOLD" target="_blank" rel="noopener">SKYGOLD</a></td>
+          <td class="r">₹559.70</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹502.83</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+11.31%</td>
+          <td class="r"><span class="rs-tag">88.4</span></td>
+          <td class="r">₹8,668 Cr</td>
+          <td class="r">₹64 Cr</td>
+          <td class="r">0.7379%</td>
+          <td>Consumer Durables</td>
+          <td>Gems, Jewellery And Watches</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ADANIGREEN" data-close="1449.4" data-ema10="1435.39"
+          data-gap="0.976" data-rs="88.3" data-tmc="238741.72"
+          data-tv="677.39" data-tvpct="0.2837"
+          data-indgrp="Power" data-ind="Power Generation">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AADANIGREEN" target="_blank" rel="noopener">ADANIGREEN</a></td>
+          <td class="r">₹1,449.40</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,435.39</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.98%</td>
+          <td class="r"><span class="rs-tag">88.3</span></td>
+          <td class="r">₹2.39L Cr</td>
+          <td class="r">₹677 Cr</td>
+          <td class="r">0.2837%</td>
+          <td>Power</td>
+          <td>Power Generation</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="DATAPATTNS" data-close="4025.2" data-ema10="4005.16"
+          data-gap="0.5004" data-rs="88.1" data-tmc="22534.67"
+          data-tv="492.76" data-tvpct="2.1867"
+          data-indgrp="Aerospace & Defense" data-ind="Aerospace & Defense">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ADATAPATTNS" target="_blank" rel="noopener">DATAPATTNS</a></td>
+          <td class="r">₹4,025.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹4,005.16</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.50%</td>
+          <td class="r"><span class="rs-tag">88.1</span></td>
+          <td class="r">₹22,535 Cr</td>
+          <td class="r">₹493 Cr</td>
+          <td class="r">2.1867%</td>
+          <td>Aerospace & Defense</td>
+          <td>Aerospace & Defense</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ARVIND" data-close="500.65" data-ema10="480.8"
+          data-gap="4.1291" data-rs="87.86" data-tmc="13122.77"
+          data-tv="38.87" data-tvpct="0.2962"
+          data-indgrp="Textiles & Apparels" data-ind="Garments & Apparels">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AARVIND" target="_blank" rel="noopener">ARVIND</a></td>
+          <td class="r">₹500.65</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹480.80</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.13%</td>
+          <td class="r"><span class="rs-tag">87.9</span></td>
+          <td class="r">₹13,123 Cr</td>
+          <td class="r">₹39 Cr</td>
+          <td class="r">0.2962%</td>
+          <td>Textiles & Apparels</td>
+          <td>Garments & Apparels</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="CEIGALL" data-close="347.8" data-ema10="344.57"
+          data-gap="0.9361" data-rs="87.71" data-tmc="6058.84"
+          data-tv="18.04" data-tvpct="0.2978"
+          data-indgrp="Construction" data-ind="Civil Construction">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACEIGALL" target="_blank" rel="noopener">CEIGALL</a></td>
+          <td class="r">₹347.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹344.57</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.94%</td>
+          <td class="r"><span class="rs-tag">87.7</span></td>
+          <td class="r">₹6,059 Cr</td>
+          <td class="r">₹18 Cr</td>
+          <td class="r">0.2978%</td>
+          <td>Construction</td>
+          <td>Civil Construction</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MUTHOOTMF" data-close="179.6" data-ema10="179.41"
+          data-gap="0.1072" data-rs="87.52" data-tmc="3013.09"
+          data-tv="13.04" data-tvpct="0.4328"
+          data-indgrp="Finance" data-ind="Microfinance Institutions">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMUTHOOTMF" target="_blank" rel="noopener">MUTHOOTMF</a></td>
+          <td class="r">₹179.60</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹179.41</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.11%</td>
+          <td class="r"><span class="rs-tag">87.5</span></td>
+          <td class="r">₹3,013 Cr</td>
+          <td class="r">₹13 Cr</td>
+          <td class="r">0.4328%</td>
+          <td>Finance</td>
+          <td>Microfinance Institutions</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="PRIVISCL" data-close="3284.4" data-ema10="3272.16"
+          data-gap="0.3741" data-rs="87.27" data-tmc="12829.75"
+          data-tv="34.04" data-tvpct="0.2653"
+          data-indgrp="Chemicals & Petrochemicals" data-ind="Specialty Chemicals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3APRIVISCL" target="_blank" rel="noopener">PRIVISCL</a></td>
+          <td class="r">₹3,284.40</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹3,272.16</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.37%</td>
+          <td class="r"><span class="rs-tag">87.3</span></td>
+          <td class="r">₹12,830 Cr</td>
+          <td class="r">₹34 Cr</td>
+          <td class="r">0.2653%</td>
+          <td>Chemicals & Petrochemicals</td>
+          <td>Specialty Chemicals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VIJAYA" data-close="1317.0" data-ema10="1270.86"
+          data-gap="3.631" data-rs="86.98" data-tmc="13551.5"
+          data-tv="28.93" data-tvpct="0.2135"
+          data-indgrp="Healthcare Services" data-ind="Healthcare Service Provider">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVIJAYA" target="_blank" rel="noopener">VIJAYA</a></td>
+          <td class="r">₹1,317.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,270.86</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.63%</td>
+          <td class="r"><span class="rs-tag">87.0</span></td>
+          <td class="r">₹13,552 Cr</td>
+          <td class="r">₹29 Cr</td>
+          <td class="r">0.2135%</td>
+          <td>Healthcare Services</td>
+          <td>Healthcare Service Provider</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NMDC" data-close="95.31" data-ema10="91.31"
+          data-gap="4.3774" data-rs="86.88" data-tmc="83794.81"
+          data-tv="233.62" data-tvpct="0.2788"
+          data-indgrp="Minerals & Mining" data-ind="Industrial Minerals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANMDC" target="_blank" rel="noopener">NMDC</a></td>
+          <td class="r">₹95.31</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹91.31</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.38%</td>
+          <td class="r"><span class="rs-tag">86.9</span></td>
+          <td class="r">₹83,795 Cr</td>
+          <td class="r">₹234 Cr</td>
+          <td class="r">0.2788%</td>
+          <td>Minerals & Mining</td>
+          <td>Industrial Minerals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AIAENG" data-close="4552.3" data-ema10="4273.88"
+          data-gap="6.5144" data-rs="86.1" data-tmc="42482.23"
+          data-tv="37.49" data-tvpct="0.0883"
+          data-indgrp="Industrial Products" data-ind="Castings & Forgings">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAIAENG" target="_blank" rel="noopener">AIAENG</a></td>
+          <td class="r">₹4,552.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹4,273.88</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+6.51%</td>
+          <td class="r"><span class="rs-tag">86.1</span></td>
+          <td class="r">₹42,482 Cr</td>
+          <td class="r">₹37 Cr</td>
+          <td class="r">0.0883%</td>
+          <td>Industrial Products</td>
+          <td>Castings & Forgings</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NITINSPIN" data-close="507.3" data-ema10="499.69"
+          data-gap="1.5238" data-rs="86.01" data-tmc="2852.04"
+          data-tv="9.91" data-tvpct="0.3473"
+          data-indgrp="Textiles & Apparels" data-ind="Other Textile Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANITINSPIN" target="_blank" rel="noopener">NITINSPIN</a></td>
+          <td class="r">₹507.30</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹499.69</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.52%</td>
+          <td class="r"><span class="rs-tag">86.0</span></td>
+          <td class="r">₹2,852 Cr</td>
+          <td class="r">₹10 Cr</td>
+          <td class="r">0.3473%</td>
+          <td>Textiles & Apparels</td>
+          <td>Other Textile Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="LLOYDSME" data-close="1821.7" data-ema10="1791.24"
+          data-gap="1.7005" data-rs="85.86" data-tmc="102480.87"
+          data-tv="129.26" data-tvpct="0.1261"
+          data-indgrp="Minerals & Mining" data-ind="Industrial Minerals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ALLOYDSME" target="_blank" rel="noopener">LLOYDSME</a></td>
+          <td class="r">₹1,821.70</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,791.24</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.70%</td>
+          <td class="r"><span class="rs-tag">85.9</span></td>
+          <td class="r">₹1.02L Cr</td>
+          <td class="r">₹129 Cr</td>
+          <td class="r">0.1261%</td>
+          <td>Minerals & Mining</td>
+          <td>Industrial Minerals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SCPL" data-close="456.2" data-ema10="434.45"
+          data-gap="5.007" data-rs="85.62" data-tmc="485.48"
+          data-tv="0.58" data-tvpct="0.1186"
+          data-indgrp="Food Products" data-ind="Dairy Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASCPL" target="_blank" rel="noopener">SCPL</a></td>
+          <td class="r">₹456.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹434.45</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+5.01%</td>
+          <td class="r"><span class="rs-tag">85.6</span></td>
+          <td class="r">₹485 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.1186%</td>
+          <td>Food Products</td>
+          <td>Dairy Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="NYKAA" data-close="269.55" data-ema10="267.58"
+          data-gap="0.7351" data-rs="85.23" data-tmc="77185.85"
+          data-tv="135.42" data-tvpct="0.1754"
+          data-indgrp="Retailing" data-ind="E-Retail/ E-Commerce">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ANYKAA" target="_blank" rel="noopener">NYKAA</a></td>
+          <td class="r">₹269.55</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹267.58</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.74%</td>
+          <td class="r"><span class="rs-tag">85.2</span></td>
+          <td class="r">₹77,186 Cr</td>
+          <td class="r">₹135 Cr</td>
+          <td class="r">0.1754%</td>
+          <td>Retailing</td>
+          <td>E-Retail/ E-Commerce</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HONASA" data-close="407.05" data-ema10="395.27"
+          data-gap="2.9808" data-rs="85.08" data-tmc="13248.8"
+          data-tv="89.8" data-tvpct="0.6778"
+          data-indgrp="Personal Products" data-ind="Personal Care">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHONASA" target="_blank" rel="noopener">HONASA</a></td>
+          <td class="r">₹407.05</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹395.27</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.98%</td>
+          <td class="r"><span class="rs-tag">85.1</span></td>
+          <td class="r">₹13,249 Cr</td>
+          <td class="r">₹90 Cr</td>
+          <td class="r">0.6778%</td>
+          <td>Personal Products</td>
+          <td>Personal Care</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="JSWSTEEL" data-close="1310.8" data-ema10="1295.13"
+          data-gap="1.21" data-rs="84.84" data-tmc="319918.23"
+          data-tv="260.38" data-tvpct="0.0814"
+          data-indgrp="Ferrous Metals" data-ind="Iron & Steel">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AJSWSTEEL" target="_blank" rel="noopener">JSWSTEEL</a></td>
+          <td class="r">₹1,310.80</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,295.13</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.21%</td>
+          <td class="r"><span class="rs-tag">84.8</span></td>
+          <td class="r">₹3.20L Cr</td>
+          <td class="r">₹260 Cr</td>
+          <td class="r">0.0814%</td>
+          <td>Ferrous Metals</td>
+          <td>Iron & Steel</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SANGAMIND" data-close="527.2" data-ema10="514.63"
+          data-gap="2.4426" data-rs="84.74" data-tmc="2599.62"
+          data-tv="2.57" data-tvpct="0.0987"
+          data-indgrp="Textiles & Apparels" data-ind="Other Textile Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASANGAMIND" target="_blank" rel="noopener">SANGAMIND</a></td>
+          <td class="r">₹527.20</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹514.63</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.44%</td>
+          <td class="r"><span class="rs-tag">84.7</span></td>
+          <td class="r">₹2,600 Cr</td>
+          <td class="r">₹3 Cr</td>
+          <td class="r">0.0987%</td>
+          <td>Textiles & Apparels</td>
+          <td>Other Textile Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VIYASH" data-close="249.95" data-ema10="248.72"
+          data-gap="0.496" data-rs="84.06" data-tmc="10909.4"
+          data-tv="39.52" data-tvpct="0.3622"
+          data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVIYASH" target="_blank" rel="noopener">VIYASH</a></td>
+          <td class="r">₹249.95</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹248.72</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.50%</td>
+          <td class="r"><span class="rs-tag">84.1</span></td>
+          <td class="r">₹10,909 Cr</td>
+          <td class="r">₹40 Cr</td>
+          <td class="r">0.3622%</td>
+          <td>Pharmaceuticals & Biotechnology</td>
+          <td>Pharmaceuticals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="CONSOFINVT" data-close="240.97" data-ema10="233.64"
+          data-gap="3.1351" data-rs="84.01" data-tmc="778.97"
+          data-tv="0.31" data-tvpct="0.0403"
+          data-indgrp="Finance" data-ind="Non Banking Financial Company (NBFC)">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACONSOFINVT" target="_blank" rel="noopener">CONSOFINVT</a></td>
+          <td class="r">₹240.97</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹233.64</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.14%</td>
+          <td class="r"><span class="rs-tag">84.0</span></td>
+          <td class="r">₹779 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0403%</td>
+          <td>Finance</td>
+          <td>Non Banking Financial Company (NBFC)</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="HSCL" data-close="607.1" data-ema10="601.1"
+          data-gap="0.9989" data-rs="83.76" data-tmc="30630.72"
+          data-tv="443.6" data-tvpct="1.4482"
+          data-indgrp="Chemicals & Petrochemicals" data-ind="Carbon Black">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AHSCL" target="_blank" rel="noopener">HSCL</a></td>
+          <td class="r">₹607.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹601.10</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.00%</td>
+          <td class="r"><span class="rs-tag">83.8</span></td>
+          <td class="r">₹30,631 Cr</td>
+          <td class="r">₹444 Cr</td>
+          <td class="r">1.4482%</td>
+          <td>Chemicals & Petrochemicals</td>
+          <td>Carbon Black</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SURYODAY" data-close="168.92" data-ema10="164.24"
+          data-gap="2.8497" data-rs="83.67" data-tmc="1795.45"
+          data-tv="8.85" data-tvpct="0.4928"
+          data-indgrp="Banks" data-ind="Other Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASURYODAY" target="_blank" rel="noopener">SURYODAY</a></td>
+          <td class="r">₹168.92</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹164.24</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.85%</td>
+          <td class="r"><span class="rs-tag">83.7</span></td>
+          <td class="r">₹1,795 Cr</td>
+          <td class="r">₹9 Cr</td>
+          <td class="r">0.4928%</td>
+          <td>Banks</td>
+          <td>Other Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="COALINDIA" data-close="472.15" data-ema10="464.17"
+          data-gap="1.7186" data-rs="83.28" data-tmc="290973.21"
+          data-tv="769.23" data-tvpct="0.2644"
+          data-indgrp="Consumable Fuels" data-ind="Coal">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ACOALINDIA" target="_blank" rel="noopener">COALINDIA</a></td>
+          <td class="r">₹472.15</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹464.17</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.72%</td>
+          <td class="r"><span class="rs-tag">83.3</span></td>
+          <td class="r">₹2.91L Cr</td>
+          <td class="r">₹769 Cr</td>
+          <td class="r">0.2644%</td>
+          <td>Consumable Fuels</td>
+          <td>Coal</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ADANIPORTS" data-close="1814.5" data-ema10="1797.49"
+          data-gap="0.9461" data-rs="83.23" data-tmc="418053.38"
+          data-tv="579.85" data-tvpct="0.1387"
+          data-indgrp="Transport Infrastructure" data-ind="Port & Port services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AADANIPORTS" target="_blank" rel="noopener">ADANIPORTS</a></td>
+          <td class="r">₹1,814.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹1,797.49</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.95%</td>
+          <td class="r"><span class="rs-tag">83.2</span></td>
+          <td class="r">₹4.18L Cr</td>
+          <td class="r">₹580 Cr</td>
+          <td class="r">0.1387%</td>
+          <td>Transport Infrastructure</td>
+          <td>Port & Port services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="GRWRHITECH" data-close="5894.5" data-ema10="5719.63"
+          data-gap="3.0574" data-rs="82.74" data-tmc="13694.33"
+          data-tv="61.75" data-tvpct="0.4509"
+          data-indgrp="Industrial Products" data-ind="Plastic Products - Industrial">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AGRWRHITECH" target="_blank" rel="noopener">GRWRHITECH</a></td>
+          <td class="r">₹5,894.50</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹5,719.63</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.06%</td>
+          <td class="r"><span class="rs-tag">82.7</span></td>
+          <td class="r">₹13,694 Cr</td>
+          <td class="r">₹62 Cr</td>
+          <td class="r">0.4509%</td>
+          <td>Industrial Products</td>
+          <td>Plastic Products - Industrial</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MARINE" data-close="258.1" data-ema10="247.0"
+          data-gap="4.4946" data-rs="82.4" data-tmc="3424.09"
+          data-tv="16.93" data-tvpct="0.4946"
+          data-indgrp="Industrial Manufacturing" data-ind="Industrial Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMARINE" target="_blank" rel="noopener">MARINE</a></td>
+          <td class="r">₹258.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹247.00</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.49%</td>
+          <td class="r"><span class="rs-tag">82.4</span></td>
+          <td class="r">₹3,424 Cr</td>
+          <td class="r">₹17 Cr</td>
+          <td class="r">0.4946%</td>
+          <td>Industrial Manufacturing</td>
+          <td>Industrial Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VTL" data-close="613.85" data-ema10="601.9"
+          data-gap="1.985" data-rs="82.35" data-tmc="17757.56"
+          data-tv="35.42" data-tvpct="0.1995"
+          data-indgrp="Textiles & Apparels" data-ind="Other Textile Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVTL" target="_blank" rel="noopener">VTL</a></td>
+          <td class="r">₹613.85</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹601.90</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.98%</td>
+          <td class="r"><span class="rs-tag">82.4</span></td>
+          <td class="r">₹17,758 Cr</td>
+          <td class="r">₹35 Cr</td>
+          <td class="r">0.1995%</td>
+          <td>Textiles & Apparels</td>
+          <td>Other Textile Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VHLTD" data-close="139.99" data-ema10="139.02"
+          data-gap="0.6969" data-rs="81.91" data-tmc="947.73"
+          data-tv="0.19" data-tvpct="0.0202"
+          data-indgrp="Leisure Services" data-ind="Hotels & Resorts">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVHLTD" target="_blank" rel="noopener">VHLTD</a></td>
+          <td class="r">₹139.99</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹139.02</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.70%</td>
+          <td class="r"><span class="rs-tag">81.9</span></td>
+          <td class="r">₹948 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0202%</td>
+          <td>Leisure Services</td>
+          <td>Hotels & Resorts</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="BANDHANBNK" data-close="206.33" data-ema10="202.72"
+          data-gap="1.7792" data-rs="80.94" data-tmc="33240.13"
+          data-tv="264.25" data-tvpct="0.795"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ABANDHANBNK" target="_blank" rel="noopener">BANDHANBNK</a></td>
+          <td class="r">₹206.33</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹202.72</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.78%</td>
+          <td class="r"><span class="rs-tag">80.9</span></td>
+          <td class="r">₹33,240 Cr</td>
+          <td class="r">₹264 Cr</td>
+          <td class="r">0.7950%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AARVI" data-close="131.64" data-ema10="130.42"
+          data-gap="0.9381" data-rs="80.84" data-tmc="194.97"
+          data-tv="0.28" data-tvpct="0.1411"
+          data-indgrp="Commercial Services & Supplies" data-ind="Diversified Commercial Services">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAARVI" target="_blank" rel="noopener">AARVI</a></td>
+          <td class="r">₹131.64</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹130.42</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.94%</td>
+          <td class="r"><span class="rs-tag">80.8</span></td>
+          <td class="r">₹195 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.1411%</td>
+          <td>Commercial Services & Supplies</td>
+          <td>Diversified Commercial Services</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="MEGASTAR" data-close="308.9" data-ema10="295.48"
+          data-gap="4.5403" data-rs="80.74" data-tmc="348.86"
+          data-tv="1.07" data-tvpct="0.3063"
+          data-indgrp="Food Products" data-ind="Other Food Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AMEGASTAR" target="_blank" rel="noopener">MEGASTAR</a></td>
+          <td class="r">₹308.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹295.48</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+4.54%</td>
+          <td class="r"><span class="rs-tag">80.7</span></td>
+          <td class="r">₹349 Cr</td>
+          <td class="r">₹1 Cr</td>
+          <td class="r">0.3063%</td>
+          <td>Food Products</td>
+          <td>Other Food Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ABB" data-close="7146.0" data-ema10="6976.21"
+          data-gap="2.4339" data-rs="79.18" data-tmc="151429.72"
+          data-tv="324.32" data-tvpct="0.2142"
+          data-indgrp="Electrical Equipment" data-ind="Heavy Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AABB" target="_blank" rel="noopener">ABB</a></td>
+          <td class="r">₹7,146.00</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹6,976.21</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.43%</td>
+          <td class="r"><span class="rs-tag">79.2</span></td>
+          <td class="r">₹1.51L Cr</td>
+          <td class="r">₹324 Cr</td>
+          <td class="r">0.2142%</td>
+          <td>Electrical Equipment</td>
+          <td>Heavy Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="ANGELONE" data-close="342.65" data-ema10="335.28"
+          data-gap="2.1993" data-rs="78.06" data-tmc="31295.92"
+          data-tv="349.35" data-tvpct="1.1163"
+          data-indgrp="Capital Markets" data-ind="Stockbroking & Allied">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AANGELONE" target="_blank" rel="noopener">ANGELONE</a></td>
+          <td class="r">₹342.65</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹335.28</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+2.20%</td>
+          <td class="r"><span class="rs-tag">78.1</span></td>
+          <td class="r">₹31,296 Cr</td>
+          <td class="r">₹349 Cr</td>
+          <td class="r">1.1163%</td>
+          <td>Capital Markets</td>
+          <td>Stockbroking & Allied</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="AZAD" data-close="2066.1" data-ema10="2044.16"
+          data-gap="1.0731" data-rs="77.04" data-tmc="13343.23"
+          data-tv="87.42" data-tvpct="0.6552"
+          data-indgrp="Electrical Equipment" data-ind="Heavy Electrical Equipment">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AAZAD" target="_blank" rel="noopener">AZAD</a></td>
+          <td class="r">₹2,066.10</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹2,044.16</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.07%</td>
+          <td class="r"><span class="rs-tag">77.0</span></td>
+          <td class="r">₹13,343 Cr</td>
+          <td class="r">₹87 Cr</td>
+          <td class="r">0.6552%</td>
+          <td>Electrical Equipment</td>
+          <td>Heavy Electrical Equipment</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="VISHNU" data-close="626.7" data-ema10="603.07"
+          data-gap="3.9179" data-rs="76.84" data-tmc="4218.65"
+          data-tv="7.91" data-tvpct="0.1875"
+          data-indgrp="Chemicals & Petrochemicals" data-ind="Specialty Chemicals">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AVISHNU" target="_blank" rel="noopener">VISHNU</a></td>
+          <td class="r">₹626.70</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹603.07</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.92%</td>
+          <td class="r"><span class="rs-tag">76.8</span></td>
+          <td class="r">₹4,219 Cr</td>
+          <td class="r">₹8 Cr</td>
+          <td class="r">0.1875%</td>
+          <td>Chemicals & Petrochemicals</td>
+          <td>Specialty Chemicals</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SONACOMS" data-close="611.35" data-ema10="602.84"
+          data-gap="1.4111" data-rs="74.74" data-tmc="38027.7"
+          data-tv="141.0" data-tvpct="0.3708"
+          data-indgrp="Auto Components" data-ind="Auto Components & Equipments">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASONACOMS" target="_blank" rel="noopener">SONACOMS</a></td>
+          <td class="r">₹611.35</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹602.84</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.41%</td>
+          <td class="r"><span class="rs-tag">74.7</span></td>
+          <td class="r">₹38,028 Cr</td>
+          <td class="r">₹141 Cr</td>
+          <td class="r">0.3708%</td>
+          <td>Auto Components</td>
+          <td>Auto Components & Equipments</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="SALONA" data-close="291.9" data-ema10="281.76"
+          data-gap="3.5995" data-rs="73.92" data-tmc="153.61"
+          data-tv="0.04" data-tvpct="0.0234"
+          data-indgrp="Textiles & Apparels" data-ind="Other Textile Products">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ASALONA" target="_blank" rel="noopener">SALONA</a></td>
+          <td class="r">₹291.90</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹281.76</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+3.60%</td>
+          <td class="r"><span class="rs-tag">73.9</span></td>
+          <td class="r">₹154 Cr</td>
+          <td class="r">₹0 Cr</td>
+          <td class="r">0.0234%</td>
+          <td>Textiles & Apparels</td>
+          <td>Other Textile Products</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="DHANBANK" data-close="33.72" data-ema10="33.37"
+          data-gap="1.0548" data-rs="73.67" data-tmc="1330.92"
+          data-tv="7.03" data-tvpct="0.5279"
+          data-indgrp="Banks" data-ind="Private Sector Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3ADHANBANK" target="_blank" rel="noopener">DHANBANK</a></td>
+          <td class="r">₹33.72</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹33.37</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+1.05%</td>
+          <td class="r"><span class="rs-tag">73.7</span></td>
+          <td class="r">₹1,331 Cr</td>
+          <td class="r">₹7 Cr</td>
+          <td class="r">0.5279%</td>
+          <td>Banks</td>
+          <td>Private Sector Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr>
+        <tr class="srow"
+          data-sym="EQUITASBNK" data-close="69.76" data-ema10="69.44"
+          data-gap="0.4662" data-rs="71.67" data-tmc="7963.61"
+          data-tv="26.53" data-tvpct="0.3331"
+          data-indgrp="Banks" data-ind="Other Bank">
+          <td><a class="sym-tag"
+                 style="background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald)"
+                 href="https://www.tradingview.com/chart/?symbol=NSE%3AEQUITASBNK" target="_blank" rel="noopener">EQUITASBNK</a></td>
+          <td class="r">₹69.76</td>
+          <td class="r"><span class="ema-tag"
+               style="background:#f0fdf4;border-color:#86efac;color:var(--emerald)">₹69.44</span></td>
+          <td class="r" style="color:#15803d;font-weight:700">+0.47%</td>
+          <td class="r"><span class="rs-tag">71.7</span></td>
+          <td class="r">₹7,964 Cr</td>
+          <td class="r">₹27 Cr</td>
+          <td class="r">0.3331%</td>
+          <td>Banks</td>
+          <td>Other Bank</td>
+          <td class="r">—</td>
+          <td class="c">—</td>
+        </tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>Data from NSE India &nbsp;·&nbsp; Generated 02 Jun 2026
+  &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
+
+<script>
+const histLabels = ["23 May","25 May","26 May","27 May","28 May","29 May","30 May","31 May","01 Jun","02 Jun"];
+const histCount  = [134,153,158,159,153,133,140,139,140,147];
+const histMC     = [4967798.12,5908236.4,6189366.51,0.0,0.0,0.0,5101490.56,5090055.94,5004159.42,4885553.87];
+const histTV     = [18218.1,22483.95,23525.73,0.0,0.0,0.0,20722.98,20683.07,20383.9,19126.2];
+
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = "#78716c";
+
+
+const _lineOpts = (yFmt, tooltipFmt) => ({
+  responsive: true, maintainAspectRatio: false,
+  tension: 0.35,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#fff', borderColor: '#e4e0d8', borderWidth: 1,
+      titleColor: '#1c1917', bodyColor: '#78716c', padding: 10,
+      callbacks: { label: tooltipFmt },
+    },
+  },
+  scales: {
+    x: { ticks: { color: '#a8a29e', maxTicksLimit: 10 }, grid: { color: '#f0ede8' } },
+    y: { ticks: { color: '#a8a29e', callback: yFmt }, grid: { color: '#f0ede8' } },
+  },
+});
+
+new Chart(document.getElementById('countChart'), {
+  type: 'line',
+  data: { labels: histLabels, datasets: [{
+    label: 'Elite Stocks', data: histCount,
+    borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.08)',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#059669', fill: true,
+  }]},
+  options: _lineOpts(
+    v => v,
+    c => ` Elite Stocks: ${c.parsed.y}`
+  ),
+});
+
+new Chart(document.getElementById('mcChart'), {
+  type: 'line',
+  data: { labels: histLabels, datasets: [{
+    label: 'Combined Mkt Cap', data: histMC,
+    borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.08)',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#0d9488', fill: true,
+  }]},
+  options: _lineOpts(
+    v => '₹' + Number(v).toLocaleString('en-IN'),
+    c => ` Mkt Cap: ₹${(c.parsed.y||0).toLocaleString('en-IN')} Cr`
+  ),
+});
+
+new Chart(document.getElementById('tvChart'), {
+  type: 'line',
+  data: { labels: histLabels, datasets: [{
+    label: 'Traded Value', data: histTV,
+    borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#2563eb', fill: true,
+  }]},
+  options: _lineOpts(
+    v => '₹' + Number(v).toLocaleString('en-IN'),
+    c => ` Traded Value: ₹${(c.parsed.y||0).toLocaleString('en-IN')} Cr`
+  ),
+});
+
+function filterRows() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#tableBody .srow').forEach(r => {
+    const sym    = (r.dataset.sym    || '').toLowerCase();
+    const indgrp = (r.dataset.indgrp || '').toLowerCase();
+    const ind    = (r.dataset.ind    || '').toLowerCase();
+    r.style.display = (sym.includes(q) || indgrp.includes(q) || ind.includes(q)) ? '' : 'none';
+  });
+}
+
+
+let sortCol = null, sortAsc = true;
+document.querySelectorAll('#mainTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col  = th.dataset.col;
+    const type = th.dataset.type;
+    if (!col) return;
+    sortAsc = (sortCol === col) ? !sortAsc : true;
+    sortCol = col;
+    document.querySelectorAll('#mainTable thead th')
+      .forEach(h => h.classList.remove('sort-asc','sort-desc'));
+    th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+    const tbody = document.getElementById('tableBody');
+    Array.from(tbody.querySelectorAll('.srow'))
+      .sort((a, b) => {
+        let av = a.dataset[col], bv = b.dataset[col];
+        if (type === 'num') {
+          av = parseFloat(av); bv = parseFloat(bv);
+          if (isNaN(av)) av = -Infinity;
+          if (isNaN(bv)) bv = -Infinity;
+          return sortAsc ? av - bv : bv - av;
+        }
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      })
+      .forEach(r => tbody.appendChild(r));
+  });
+});
+
+</script>
+</body></html>

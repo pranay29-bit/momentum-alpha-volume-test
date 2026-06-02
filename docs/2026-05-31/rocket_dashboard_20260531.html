@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🚀 Rocket Stocks — 31 May 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#f5f3ef; --surface:#ffffff; --border:#e4e0d8; --border2:#ccc8bf;
+  --text:#1c1917; --muted:#78716c; --subtle:#a8a29e;
+  --blue:#2563eb; --blue-bg:#eff6ff; --blue-mid:#bfdbfe;
+  --teal:#0d9488; --amber:#b45309; --amber-bg:#fffbeb;
+  --green:#15803d; --green-bg:#f0fdf4; --green-mid:#86efac;
+  --emerald:#059669; --red:#dc2626;
+  --purple:#7c3aed; --purple-bg:#f5f3ff;
+  --sans:'Inter',sans-serif; --serif:'Playfair Display',Georgia,serif;
+  --r:10px; --rl:14px;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:15px; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans);
+       line-height:1.6; min-height:100vh; }
+a { color:inherit; text-decoration:none; }
+
+/* ── Header ── */
+header { background:var(--surface); border-bottom:1px solid var(--border);
+         padding:1.75rem 3rem; display:flex; align-items:flex-end;
+         justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.logo-line { display:flex; align-items:center; gap:.6rem; margin-bottom:.3rem; }
+.logo-dot  { width:8px; height:8px; border-radius:50%; }
+.logo-tag  { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+             font-weight:700; }
+header h1  { font-family:var(--serif); font-size:clamp(1.5rem,3vw,2.1rem);
+             font-weight:600; letter-spacing:-.02em; line-height:1.1; }
+header .sub { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
+.date-chip  { border-radius:999px; padding:.35rem 1rem; font-size:.78rem;
+              font-weight:700; white-space:nowrap; border:1px solid; }
+
+/* ── KPI row ── */
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+           gap:1rem; padding:1.5rem 3rem; }
+.kpi { background:var(--surface); border:1px solid var(--border);
+       border-radius:var(--rl); padding:1rem 1.3rem; position:relative;
+       overflow:hidden; min-width:0; }
+.kpi-accent { position:absolute; top:0; left:1.3rem; height:3px; width:28px;
+              border-radius:0 0 3px 3px; }
+.kpi-label  { font-size:.65rem; text-transform:uppercase; letter-spacing:.1em;
+              color:var(--muted); font-weight:700; margin-bottom:.4rem; }
+.kpi-val    { font-family:var(--serif); font-size:clamp(.95rem,2vw,1.65rem);
+              font-weight:600; line-height:1; word-break:break-word; }
+.kpi.blue   .kpi-val { color:var(--blue); }
+.kpi.blue   .kpi-accent { background:var(--blue); }
+.kpi.teal   .kpi-val { color:var(--teal); }
+.kpi.teal   .kpi-accent { background:var(--teal); }
+.kpi.amber  .kpi-val { color:var(--amber); }
+.kpi.amber  .kpi-accent { background:var(--amber); }
+.kpi.green  .kpi-val { color:var(--emerald); }
+.kpi.green  .kpi-accent { background:var(--emerald); }
+.kpi.purple .kpi-val { color:var(--purple); }
+.kpi.purple .kpi-accent { background:var(--purple); }
+
+/* ── Charts ── */
+.charts-grid { padding:0 3rem 1.5rem; display:grid; gap:1rem;
+               grid-template-columns:3fr 2fr; }
+@media(max-width:860px) { .charts-grid { grid-template-columns:1fr; } }
+.chart-card  { background:var(--surface); border:1px solid var(--border);
+               border-radius:var(--rl); padding:1.25rem 1.4rem 1rem; }
+.chart-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+               color:var(--muted); font-weight:700; margin-bottom:1rem; }
+.chart-wrap  { position:relative; height:250px; }
+
+/* ── Table section ── */
+.table-section { padding:0 3rem 3rem; }
+.sec-head  { display:flex; align-items:center; justify-content:space-between;
+             margin-bottom:.85rem; flex-wrap:wrap; gap:.75rem; }
+.sec-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+             color:var(--muted); font-weight:700; }
+.controls  { display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; }
+.search-input { background:var(--surface); border:1px solid var(--border2);
+                border-radius:var(--r); color:var(--text); font-family:var(--sans);
+                font-size:.82rem; padding:.4rem .85rem; outline:none; width:190px;
+                transition:border-color .18s; }
+.search-input::placeholder { color:var(--subtle); }
+.legend { display:flex; gap:1.1rem; font-size:.7rem; color:var(--muted);
+          flex-wrap:wrap; align-items:center; }
+.leg-item { display:flex; align-items:center; gap:.3rem; }
+.leg-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.tbl-wrap { background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--rl); overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:.82rem; white-space:nowrap; }
+thead tr { background:#faf9f7; border-bottom:1px solid var(--border);
+           position:sticky; top:0; z-index:2; }
+th { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em;
+     color:var(--muted); padding:.7rem 1rem; text-align:left; cursor:pointer;
+     user-select:none; transition:background .12s; }
+th:hover { background:#f0ede8; }
+th.r { text-align:right; } th.c { text-align:center; }
+th .si { margin-left:.3rem; opacity:.35; font-style:normal; font-size:.7rem; }
+th.sort-asc  .si::after { content:'▲'; opacity:1; }
+th.sort-desc .si::after { content:'▼'; opacity:1; }
+th:not(.sort-asc):not(.sort-desc) .si::after { content:'⇅'; }
+.srow { border-bottom:1px solid var(--border); transition:background .12s; }
+.srow:last-child { border-bottom:none; }
+.srow:hover { background:#fafaf8; }
+td { padding:.7rem 1rem; vertical-align:middle; }
+td.r { text-align:right; } td.c { text-align:center; }
+a.sym-tag { display:inline-block; font-weight:700; font-size:.75rem;
+            padding:.17rem .55rem; border-radius:6px; letter-spacing:.04em;
+            text-decoration:none; border:1px solid; transition:background .15s; }
+.rs-tag  { display:inline-block; background:var(--amber-bg); border:1px solid #fde68a;
+           color:var(--amber); font-size:.73rem; font-weight:700;
+           padding:.14rem .5rem; border-radius:999px; }
+.ema-tag { display:inline-block; font-size:.73rem; font-weight:700;
+           padding:.14rem .5rem; border-radius:999px; border:1px solid transparent; }
+.bar-cell { display:flex; align-items:center; gap:.5rem; min-width:150px; }
+.bar-bg   { flex:1; height:5px; background:#ebe9e4; border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:99px; }
+.bar-pct  { font-size:.73rem; font-weight:700; min-width:36px; text-align:right; }
+.badge    { font-size:.65rem; font-weight:700; letter-spacing:.06em;
+            text-transform:uppercase; border-radius:999px; padding:.22rem .7rem;
+            border:1px solid; }
+.badge-row { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+footer { text-align:center; padding:1.1rem; font-size:.7rem; color:var(--subtle);
+         border-top:1px solid var(--border); background:var(--surface); }
+/* ── CSV download button ── */
+.csv-bar { display:flex; align-items:center; gap:12px; padding:.65rem 3rem;
+           background:var(--surface); border-bottom:1px solid var(--border); }
+.csv-btn  { display:inline-flex; align-items:center; gap:5px; padding:.4rem 1rem;
+            background:#238636; color:#fff; font-size:.78rem; font-weight:700;
+            border:1px solid #2ea043; border-radius:6px; text-decoration:none;
+            transition:background .15s; }
+.csv-btn:hover { background:#2ea043; }
+.csv-btn-full { background:#1f6feb; border-color:#388bfd; }
+.csv-btn-full:hover { background:#388bfd; }
+.csv-bar-label { font-size:.72rem; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-line">
+      <div class="logo-dot" style="background:#f97316"></div>
+      <span class="logo-tag" style="color:#f97316">Momentum Alpha · Rocket Stocks</span>
+    </div>
+    <h1>🚀 Rocket Stocks</h1>
+    <p class="sub">All 8 Minervini conditions met &plus; Inside Bar on latest close · NSE data</p>
+    <div class="badge-row">
+      <span class="badge" style="background:#fff7ed;border-color:#fdba74;color:#c2410c">✓ All 8 Minervini Conditions</span>
+      <span class="badge" style="background:#fff7ed;border-color:#f97316;color:#f97316">✓ Inside Bar</span>
+    </div>
+  </div>
+  <div class="date-chip" style="background:#fff7ed;border-color:#fdba74;color:#c2410c">31 May 2026</div>
+</header>
+
+<div class="kpi-row">
+  <div class="kpi amber"><div class="kpi-accent"></div>
+    <div class="kpi-label">Rocket Stocks</div>
+    <div class="kpi-val">6</div>
+  </div>
+  <div class="kpi blue"><div class="kpi-accent"></div>
+    <div class="kpi-label">Total Passing Stocks</div>
+    <div class="kpi-val">205</div>
+  </div>
+  <div class="kpi green"><div class="kpi-accent"></div>
+    <div class="kpi-label">Inside Bar Hit Rate</div>
+    <div class="kpi-val">2.9%</div>
+  </div>
+</div>
+
+<div style="padding:.75rem 3rem 0;font-size:.78rem;color:var(--muted)">
+  <strong style="color:#f97316">Inside Bar:</strong>
+  Today's high &lt; yesterday's high <strong>AND</strong> today's low &gt; yesterday's low —
+  price compression inside a strong uptrend. A potential coiling setup before breakout.
+</div>
+
+<div class="table-section">
+  <div class="sec-head">
+    <span class="sec-title">Rocket Stocks (6)</span>
+    <div class="controls">
+      <input class="search-input" id="searchInput" type="text"
+             placeholder="Search symbol / industry…" oninput="filterRows()"/>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table id="mainTable">
+      <thead><tr>
+        <th data-col="sym"   data-type="str">Symbol<i class="si"></i></th>
+        <th class="r" data-col="close" data-type="num">Close ₹<i class="si"></i></th>
+        <th class="r" data-col="ema10" data-type="num">EMA10 ₹<i class="si"></i></th>
+        <th class="r" data-col="rs"    data-type="num">RS %ile<i class="si"></i></th>
+        <th class="r">% above 52W Low</th>
+        <th class="r">% from 52W High</th>
+        <th class="r" data-col="tmc"   data-type="num">Mkt Cap<i class="si"></i></th>
+        <th class="r" data-col="tv"    data-type="num">Traded Value<i class="si"></i></th>
+        <th data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
+      </tr></thead>
+      <tbody id="tableBody">
+            <tr class="srow"
+              data-sym="DPEL" data-close="504.85" data-rs="99.41"
+              data-ema10="508.24" data-tmc="1199.78" data-tv="3.06"
+              data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3ADPEL" target="_blank" rel="noopener">DPEL</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹504.85</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹508.24</span></td>
+              <td class="r"><span class="rs-tag">99.4</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+310.4%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-7.8%</td>
+              <td class="r">₹1,200 Cr</td>
+              <td class="r">₹3 Cr</td>
+              <td>Industrial Products</td>
+            </tr>
+            <tr class="srow"
+              data-sym="NGLFINE" data-close="2785.1" data-rs="97.11"
+              data-ema10="2620.39" data-tmc="1720.64" data-tv="3.44"
+              data-indgrp="Pharmaceuticals & Biotechnology" data-ind="Pharmaceuticals">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3ANGLFINE" target="_blank" rel="noopener">NGLFINE</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹2,785.10</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹2,620.39</span></td>
+              <td class="r"><span class="rs-tag">97.1</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+184.6%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-7.3%</td>
+              <td class="r">₹1,721 Cr</td>
+              <td class="r">₹3 Cr</td>
+              <td>Pharmaceuticals & Biotechnology</td>
+            </tr>
+            <tr class="srow"
+              data-sym="TFCILTD" data-close="73.05" data-rs="93.87"
+              data-ema10="73.84" data-tmc="3382.05" data-tv="40.63"
+              data-indgrp="Finance" data-ind="Financial Institution">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3ATFCILTD" target="_blank" rel="noopener">TFCILTD</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹73.05</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹73.84</span></td>
+              <td class="r"><span class="rs-tag">93.9</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+88.5%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-13.7%</td>
+              <td class="r">₹3,382 Cr</td>
+              <td class="r">₹41 Cr</td>
+              <td>Finance</td>
+            </tr>
+            <tr class="srow"
+              data-sym="CONSOFINVT" data-close="230.31" data-rs="81.37"
+              data-ema10="230.34" data-tmc="744.51" data-tv="0.3"
+              data-indgrp="Finance" data-ind="Non Banking Financial Company (NBFC)">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3ACONSOFINVT" target="_blank" rel="noopener">CONSOFINVT</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹230.31</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹230.34</span></td>
+              <td class="r"><span class="rs-tag">81.4</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+51.5%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-6.4%</td>
+              <td class="r">₹745 Cr</td>
+              <td class="r">₹0 Cr</td>
+              <td>Finance</td>
+            </tr>
+            <tr class="srow"
+              data-sym="FINCABLES" data-close="1136.3" data-rs="78.04"
+              data-ema10="1089.77" data-tmc="17378.5" data-tv="72.31"
+              data-indgrp="Industrial Products" data-ind="Cables - Electricals">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3AFINCABLES" target="_blank" rel="noopener">FINCABLES</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹1,136.30</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹1,089.77</span></td>
+              <td class="r"><span class="rs-tag">78.0</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+62.1%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-4.1%</td>
+              <td class="r">₹17,378 Cr</td>
+              <td class="r">₹72 Cr</td>
+              <td>Industrial Products</td>
+            </tr>
+            <tr class="srow"
+              data-sym="ANGELONE" data-close="337.3" data-rs="76.72"
+              data-ema10="332.35" data-tmc="30807.27" data-tv="346.01"
+              data-indgrp="Capital Markets" data-ind="Stockbroking & Allied">
+              <td>
+                <a class="sym-tag"
+                   style="background:#fff7ed;border-color:#fdba74;color:#c2410c"
+                   href="https://www.tradingview.com/chart/?symbol=NSE%3AANGELONE" target="_blank" rel="noopener">ANGELONE</a>
+                <span style="font-size:.62rem;background:rgba(249,115,22,.15);
+                             border:1px solid #f97316;color:#f97316;padding:1px 5px;
+                             border-radius:3px;font-weight:700;margin-left:5px">IB</span>
+              </td>
+              <td class="r">₹337.30</td>
+              <td class="r"><span class="ema-tag"
+                   style="background:#f0fdf4;border-color:#86efac;color:#059669">₹332.35</span></td>
+              <td class="r"><span class="rs-tag">76.7</span></td>
+              <td class="r" style="color:#15803d;font-weight:600">+63.1%</td>
+              <td class="r" style="color:#b45309;font-weight:600">-3.9%</td>
+              <td class="r">₹30,807 Cr</td>
+              <td class="r">₹346 Cr</td>
+              <td>Capital Markets</td>
+            </tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>Data from NSE India &nbsp;·&nbsp; Generated 31 May 2026
+  &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice</footer>
+
+<script>
+
+function filterRows() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#tableBody .srow').forEach(r => {
+    const sym    = (r.dataset.sym    || '').toLowerCase();
+    const indgrp = (r.dataset.indgrp || '').toLowerCase();
+    const ind    = (r.dataset.ind    || '').toLowerCase();
+    r.style.display = (sym.includes(q) || indgrp.includes(q) || ind.includes(q)) ? '' : 'none';
+  });
+}
+
+
+let sortCol = null, sortAsc = true;
+document.querySelectorAll('#mainTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col  = th.dataset.col;
+    const type = th.dataset.type;
+    if (!col) return;
+    sortAsc = (sortCol === col) ? !sortAsc : true;
+    sortCol = col;
+    document.querySelectorAll('#mainTable thead th')
+      .forEach(h => h.classList.remove('sort-asc','sort-desc'));
+    th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+    const tbody = document.getElementById('tableBody');
+    Array.from(tbody.querySelectorAll('.srow'))
+      .sort((a, b) => {
+        let av = a.dataset[col], bv = b.dataset[col];
+        if (type === 'num') {
+          av = parseFloat(av); bv = parseFloat(bv);
+          if (isNaN(av)) av = -Infinity;
+          if (isNaN(bv)) bv = -Infinity;
+          return sortAsc ? av - bv : bv - av;
+        }
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      })
+      .forEach(r => tbody.appendChild(r));
+  });
+});
+
+</script>
+</body></html>

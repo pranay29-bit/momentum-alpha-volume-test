@@ -66,22 +66,22 @@ _GOOGLE_FONTS = (
 
 _BASE_CSS = """
 :root {
-  /* Surfaces */
-  --bg:         #f7f8fc;
+  /* Surfaces — pure white everywhere */
+  --bg:         #ffffff;
   --surface:    #ffffff;
-  --surface2:   #f1f3f9;
-  --surface3:   #e8ebf5;
-  --border:     #e2e6f0;
-  --border2:    #ccd1e4;
+  --surface2:   #f8f9fb;
+  --surface3:   #f1f3f7;
+  --border:     #e8eaef;
+  --border2:    #d1d5e0;
 
   /* Text */
-  --text:       #0f1629;
-  --muted:      #5a6282;
-  --subtle:     #8b93b5;
+  --text:       #111827;
+  --muted:      #6b7280;
+  --subtle:     #9ca3af;
 
   /* Brand accents */
   --indigo:     #4f46e5;
-  --indigo-lt:  #eef0fd;
+  --indigo-lt:  #eef2ff;
   --indigo-mid: #c7d2fe;
   --emerald:    #059669;
   --emerald-lt: #ecfdf5;
@@ -115,12 +115,12 @@ _BASE_CSS = """
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
+html { font-size: 15px; }
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  line-height: 1.6;
+  line-height: 1.65;
   min-height: 100vh;
 }
 a { color: inherit; text-decoration: none; }
@@ -133,7 +133,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Header ── */
 header {
-  background: var(--surface);
+  background: #ffffff;
   border-bottom: 1px solid var(--border);
   padding: 1.6rem 2.5rem;
   display: flex;
@@ -350,19 +350,19 @@ header h1 {
   border-radius: var(--rl);
   overflow: hidden;
 }
-table { width: 100%; border-collapse: collapse; font-size: .82rem; white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: .87rem; white-space: nowrap; }
 thead tr {
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 2;
 }
 th {
-  font-size: .62rem;
+  font-size: .67rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .1em;
+  letter-spacing: .09em;
   color: var(--muted);
-  padding: .68rem 1rem;
+  padding: .72rem 1rem;
   text-align: left;
   cursor: pointer;
   user-select: none;
@@ -526,7 +526,7 @@ function filterRows() {
 _CHARTJS_DEFAULTS = """
 Chart.defaults.font.family = "'Outfit', sans-serif";
 Chart.defaults.font.size   = 11;
-Chart.defaults.color       = "#5a6282";
+Chart.defaults.color       = "#6b7280";
 """
 
 
@@ -775,15 +775,15 @@ new Chart(document.getElementById('barChart'), {{
     plugins: {{
       legend: {{ display: false }},
       tooltip: {{
-        backgroundColor: '#fff', borderColor: '#e2e6f0', borderWidth: 1,
-        titleColor: '#0f1629', bodyColor: '#5a6282', padding: 10,
+        backgroundColor: '#fff', borderColor: '#e8eaef', borderWidth: 1,
+        titleColor: '#111827', bodyColor: '#6b7280', padding: 10,
         callbacks: {{ label: c => ` ₹${{(c.parsed.y||0).toLocaleString('en-IN')}} Cr` }},
       }},
     }},
     scales: {{
-      x: {{ ticks: {{ color: '#8b93b5', maxTicksLimit: 30 }}, grid: {{ color: '#f1f3f9' }} }},
-      y: {{ ticks: {{ color: '#8b93b5', callback: v => '₹' + Number(v).toLocaleString('en-IN') }},
-            grid: {{ color: '#f1f3f9' }} }},
+      x: {{ ticks: {{ color: '#9ca3af', maxTicksLimit: 30 }}, grid: {{ color: '#f8f9fb' }} }},
+      y: {{ ticks: {{ color: '#9ca3af', callback: v => '₹' + Number(v).toLocaleString('en-IN') }},
+            grid: {{ color: '#f8f9fb' }} }},
     }},
   }},
 }});
@@ -1009,14 +1009,14 @@ const lineOpts = (yFmt, tipFmt) => ({{
   plugins: {{
     legend: {{ display: false }},
     tooltip: {{
-      backgroundColor: '#fff', borderColor: '#e2e6f0', borderWidth: 1,
-      titleColor: '#0f1629', bodyColor: '#5a6282', padding: 10,
+      backgroundColor: '#fff', borderColor: '#e8eaef', borderWidth: 1,
+      titleColor: '#111827', bodyColor: '#6b7280', padding: 10,
       callbacks: {{ label: tipFmt }},
     }},
   }},
   scales: {{
-    x: {{ ticks: {{ color: '#8b93b5', maxTicksLimit: 10 }}, grid: {{ color: '#f1f3f9' }} }},
-    y: {{ ticks: {{ color: '#8b93b5', callback: yFmt }}, grid: {{ color: '#f1f3f9' }} }},
+    x: {{ ticks: {{ color: '#9ca3af', maxTicksLimit: 10 }}, grid: {{ color: '#f8f9fb' }} }},
+    y: {{ ticks: {{ color: '#9ca3af', callback: yFmt }}, grid: {{ color: '#f8f9fb' }} }},
   }},
 }});
 new Chart(document.getElementById('countChart'), {{
@@ -1375,8 +1375,8 @@ def build_main_index(
 <link href="{_GOOGLE_FONTS}" rel="stylesheet"/>
 <style>
 :root {{
-  --bg:#f7f8fc; --surface:#fff; --border:#e2e6f0;
-  --text:#0f1629; --muted:#5a6282;
+  --bg:#ffffff; --surface:#fff; --border:#e8eaef;
+  --text:#111827; --muted:#6b7280;
   --sans:'Outfit',system-ui,sans-serif; --mono:'DM Mono',monospace;
 }}
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}

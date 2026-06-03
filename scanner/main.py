@@ -78,7 +78,12 @@ def run() -> None:
     logger.info("Full results → %s", full_path)
 
     # ── 5. Passing stocks ─────────────────────────────────────────────────────
-    passing = df[df["all_conditions_met"]].copy()
+    
+    # 1. Catch our exact indices so they don't get deleted by the momentum filter
+    is_index = df["symbol"].isin(["^CNXSC", "NIFTYSMLCAP250.NS"])
+    
+    # 2. Keep the stock if it meets all conditions OR if it is one of our indices
+    passing = df[df["all_conditions_met"] | is_index].copy()
 
     if not passing.empty:
         passing = enrich_with_market_caps(passing)
@@ -124,54 +129,82 @@ def run() -> None:
   
 
     # ── 9. HTML Dashboards ────────────────────────────────────────────────────
+
+    # ── Compute known_symbols: all symbols seen in the past 10 calendar days ──
+    # Used by each dashboard to highlight stocks appearing for the first time.
+    known_symbols: set[str] = set()
+    history:       list[dict] = []
+    docs_root = Path(DOCS_DIR)
+    dated_dirs_sorted = sorted(
+        [d for d in docs_root.iterdir()
+         if d.is_dir() and d.name.replace("-", "").isdigit()
+         and len(d.name.replace("-", "")) == 8],
+        key=lambda d: d.name,
+    )
+    for dated_dir in dated_dirs_sorted:
+        dir_slug = dated_dir.name.replace("-", "")
+        if dir_slug == today_str:
+            continue
+        # ── history for elite chart ──────────────────────────────────────────
+        elite_csv = dated_dir / f"passing_ema10_{dir_slug}.csv"
+        if elite_csv.exists():
+            try:
+                hist_df = pd.read_csv(elite_csv)
+                mc = float(hist_df["total_market_cap_cr"].dropna().sum()) \
+                     if "total_market_cap_cr" in hist_df.columns else 0.0
+                tv = float(hist_df["traded_value_cr"].dropna().sum()) \
+                     if "traded_value_cr" in hist_df.columns else 0.0
+                history.append({
+                    "date":            dir_slug,
+                    "count":           len(hist_df),
+                    "market_cap_cr":   mc,
+                    "traded_value_cr": tv,
+                })
+            except Exception as exc:
+                logger.warning("Could not read elite history from %s: %s", elite_csv, exc)
+        # ── known_symbols: scan passing_stocks CSVs from last 10 days ────────
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            dir_date   = _dt.strptime(dir_slug, "%Y%m%d").date()
+            today_date = _dt.strptime(today_str, "%Y%m%d").date()
+            if (today_date - dir_date).days <= 10:
+                for csv_name in [f"passing_stocks_{dir_slug}.csv",
+                                 f"passing_ema10_{dir_slug}.csv",
+                                 f"volume_action_{dir_slug}.csv"]:
+                    csv_p = dated_dir / csv_name
+                    if csv_p.exists():
+                        hist_df2 = pd.read_csv(csv_p)
+                        if "symbol" in hist_df2.columns:
+                            known_symbols.update(
+                                str(s).replace(".NS", "")
+                                for s in hist_df2["symbol"].dropna()
+                            )
+        except Exception as exc:
+            logger.warning("Could not load known_symbols from %s: %s", dated_dir, exc)
+
+    logger.info("Known symbols (last 10 days): %d", len(known_symbols))
+
     if not passing.empty:
         build_passing_dashboard(
             passing,
             out_dir / f"dashboard_{today_str}.html",
             today_str,
+            known_symbols=known_symbols,
         )
-        # ── Rocket Stocks dashboard ──
         build_rocket_dashboard(
             passing,
             out_dir / f"rocket_dashboard_{today_str}.html",
             today_str,
+            known_symbols=known_symbols,
         )
-      
-    if not passing_ema10.empty:
-        # ── Collect historical elite-stock data from past dated folders ───────
-        history: list[dict] = []
-        docs_root = Path(DOCS_DIR)
-        for dated_dir in sorted(docs_root.iterdir()):
-            if not dated_dir.is_dir():
-                continue
-            dir_slug = dated_dir.name.replace("-", "")
-            if not dir_slug.isdigit() or len(dir_slug) != 8:
-                continue
-            if dir_slug == today_str:
-                continue  # today's point added by the dashboard builder
-            csv_path = dated_dir / f"passing_ema10_{dir_slug}.csv"
-            if not csv_path.exists():
-                continue
-            try:
-                hist_df = pd.read_csv(csv_path)
-                mc  = float(hist_df["total_market_cap_cr"].dropna().sum()) \
-                      if "total_market_cap_cr" in hist_df.columns else 0.0
-                tv  = float(hist_df["traded_value_cr"].dropna().sum()) \
-                      if "traded_value_cr" in hist_df.columns else 0.0
-                history.append({
-                    "date":             dir_slug,
-                    "count":            len(hist_df),
-                    "market_cap_cr":    mc,
-                    "traded_value_cr":  tv,
-                })
-            except Exception as exc:
-                logger.warning("Could not read history from %s: %s", csv_path, exc)
 
+    if not passing_ema10.empty:
         build_passing_ema10_dashboard(
             passing_ema10,
             out_dir / f"elite_dashboard_{today_str}.html",
             today_str,
             history=history,
+            known_symbols=known_symbols,
         )
 
     if not volume_action.empty:
@@ -179,6 +212,7 @@ def run() -> None:
             volume_action,
             out_dir / f"volume_dashboard_{today_str}.html",
             today_str,
+            known_symbols=known_symbols,
         )
 
     # ── 9b. Market Sentiment (small-cap indices) ──────────────────────────────

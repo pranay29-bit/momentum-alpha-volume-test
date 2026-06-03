@@ -705,10 +705,7 @@ def build_passing_dashboard(
 
 <div class="callout">
   <strong style="color:var(--indigo)">Minervini Trend Template:</strong>
-  Stocks satisfying all 8 conditions — price above MA150 &amp; MA200, MA150 &gt; MA200,
-  MA200 trending up ≥ 1 month, MA50 above MA150 &amp; MA200, price above MA50,
-  price ≥ 30% above 52-week low, within 25% of 52-week high, and RS percentile ≥ 70.
-  These are momentum candidates in a confirmed Stage 2 uptrend.
+  Stocks satisfying Minervini Trend Template Conditions. These are momentum candidates in a confirmed Stage 2 uptrend.
 </div>
 
 <div class="charts-area" style="grid-template-columns:1fr">

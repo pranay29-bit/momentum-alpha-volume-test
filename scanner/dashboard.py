@@ -580,7 +580,6 @@ def _csv_bar_elite(date_str: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 #  PASSING STOCKS DASHBOARD
 # ─────────────────────────────────────────────────────────────────────────────
-
 def build_passing_dashboard(
     passing: pd.DataFrame,
     out_path: Path,
@@ -589,7 +588,7 @@ def build_passing_dashboard(
 ) -> None:
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
     known = known_symbols or set()
-
+ 
     n_stocks    = len(passing)
     n_above_ema = int(passing.get("cond9_price_above_ema10", pd.Series(dtype=bool)).sum()) \
                   if "cond9_price_above_ema10" in passing.columns else "N/A"
@@ -597,10 +596,10 @@ def build_passing_dashboard(
                   if "total_market_cap_cr" in passing.columns else "N/A"
     total_tv_s  = fmt_cr(passing["traded_value_cr"].dropna().sum()) \
                   if "traded_value_cr" in passing.columns else "N/A"
-
+ 
     rows_html = ""
     chart_labels, chart_total = [], []
-
+ 
     sort_col = "rs_percentile" if "rs_percentile" in passing.columns else "close"
     for _, row in passing.sort_values(sort_col, ascending=False).iterrows():
         sym        = str(row.get("symbol", "")).replace(".NS", "")
@@ -617,20 +616,20 @@ def build_passing_dashboard(
         industry   = str(row.get("industry",       "")) or "—"
         result_date = str(row.get("result_date", "—"))
         price_band  = str(row.get("price_band",  "—"))
-
+ 
         close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
         ema10_s = f"₹{float(ema10):,.2f}" if _safe(ema10) else "N/A"
         rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
         tmc_s   = fmt_cr(tmc)
         tv_s    = fmt_cr(tv)
         tvpct_s = f"{float(tvpct):.4f}%"  if _safe(tvpct) else "N/A"
-
+ 
         try:
             above_ema = float(close) > float(ema10)
             ema_cls = "pill-green" if above_ema else "pill-red"
         except Exception:
             ema_cls = "pill-muted"
-
+ 
         rows_html += f"""
         <tr class="srow{new_cls}"
           data-sym="{sym}" data-close="{_r(close)}" data-rs="{_r(rs)}"
@@ -652,13 +651,13 @@ def build_passing_dashboard(
           <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{result_date}</td>
           <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{price_band}</td>
         </tr>"""
-
+ 
         chart_labels.append(f'"{sym}"')
         chart_total.append(_r(tmc))
-
+ 
     n_new = sum(1 for _, r in passing.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
-
+ 
     html  = _html_head(f"Momentum Alpha — Passing Stocks — {date_display}",
                        "var(--indigo)", "var(--blue)")
     html += _csv_bar_passing(date_str)
@@ -678,7 +677,7 @@ def build_passing_dashboard(
   </div>
   <div class="date-pill" style="background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo)">{date_display}</div>
 </header>
-
+ 
 <div class="kpi-strip" style="--accent:var(--indigo)">
   <div class="kpi" style="--accent:var(--indigo)">
     <div class="kpi-lbl">Passing Stocks</div>
@@ -702,7 +701,7 @@ def build_passing_dashboard(
   </div>
   {"<div class='kpi' style='--accent:var(--new-text)'><div class='kpi-lbl'>New Appearances</div><div class='kpi-val'>" + str(n_new) + "</div><div class='kpi-hint'>first time in 10 days</div></div>" if n_new else ""}
 </div>
-
+ 
 <div class="charts-area" style="grid-template-columns:1fr">
   <div class="chart-card">
     <div class="chart-lbl">Total Market Cap by Stock (₹ Cr)</div>
@@ -711,7 +710,7 @@ def build_passing_dashboard(
     </div>
   </div>
 </div>
-
+ 
 <div class="table-sec">
   <div class="tbl-head">
     <div>
@@ -747,9 +746,9 @@ def build_passing_dashboard(
     </table>
   </div>
 </div>
-
+ 
 <footer>Data: NSE India &amp; Yahoo Finance · Generated {date_display} · For informational purposes only · Not financial advice</footer>
-
+ 
 <script>
 const labels    = [{",".join(chart_labels)}];
 const totalData = [{",".join(chart_total)}];
@@ -783,15 +782,15 @@ new Chart(document.getElementById('barChart'), {{
 {_TABLE_SORT_JS}
 </script>
 </body></html>"""
-
+ 
     out_path.write_text(html, encoding="utf-8")
     logger.info("Passing dashboard → %s", out_path)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ELITE DASHBOARD  (all 8 conditions + above EMA10)
 # ─────────────────────────────────────────────────────────────────────────────
-
+ 
 def build_passing_ema10_dashboard(
     df: pd.DataFrame,
     out_path: Path,
@@ -801,13 +800,13 @@ def build_passing_ema10_dashboard(
 ) -> None:
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
     known = known_symbols or set()
-
+ 
     n_total     = len(df)
     total_tmc_s = fmt_cr(df["total_market_cap_cr"].dropna().sum()) \
                   if "total_market_cap_cr" in df.columns else "N/A"
     total_tv_s  = fmt_cr(df["traded_value_cr"].dropna().sum()) \
                   if "traded_value_cr" in df.columns else "N/A"
-
+ 
     rows_html = ""
     for _, row in df.iterrows():
         sym      = str(row.get("symbol", "")).replace(".NS", "")
@@ -824,21 +823,21 @@ def build_passing_ema10_dashboard(
         industry = str(row.get("industry",       "")) or "—"
         result_date = str(row.get("result_date", "—"))
         price_band  = str(row.get("price_band",  "—"))
-
+ 
         close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
         ema10_s = f"₹{float(ema10):,.2f}" if _safe(ema10) else "N/A"
         rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
         tmc_s   = fmt_cr(tmc)
         tv_s    = fmt_cr(tv)
         tvpct_s = f"{float(tvpct):.4f}%"  if _safe(tvpct) else "N/A"
-
+ 
         try:
             gap_pct = (float(close) - float(ema10)) / float(ema10) * 100
             gap_s   = f"+{gap_pct:.2f}%"
             gap_col = "var(--emerald)"
         except Exception:
             gap_pct = -1.0; gap_s = "N/A"; gap_col = "var(--subtle)"
-
+ 
         rows_html += f"""
         <tr class="srow{new_cls}"
           data-sym="{sym}" data-close="{_r(close)}" data-ema10="{_r(ema10)}"
@@ -861,7 +860,7 @@ def build_passing_ema10_dashboard(
           <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{result_date}</td>
           <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{price_band}</td>
         </tr>"""
-
+ 
     # History charts
     hist = list(history) if history else []
     today_entry = {
@@ -872,19 +871,19 @@ def build_passing_ema10_dashboard(
     hist = [h for h in hist if h.get("date") != date_str]
     hist.append(today_entry)
     hist.sort(key=lambda h: h["date"])
-
+ 
     def _dl(d):
         try: return datetime.strptime(d, "%Y%m%d").strftime("%d %b")
         except: return d
-
+ 
     hl_js  = ",".join(f'"{_dl(h["date"])}"'                           for h in hist)
     hc_js  = ",".join(str(int(h.get("count", 0)))                     for h in hist)
     hmc_js = ",".join(str(round(float(h.get("market_cap_cr", 0)), 2)) for h in hist)
     htv_js = ",".join(str(round(float(h.get("traded_value_cr",0)),2)) for h in hist)
-
+ 
     n_new = sum(1 for _, r in df.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
-
+ 
     html  = _html_head(f"Momentum Alpha — Elite Stocks — {date_display}",
                        "var(--emerald)", "var(--blue)")
     html += _csv_bar_elite(date_str)
@@ -905,7 +904,7 @@ def build_passing_ema10_dashboard(
   </div>
   <div class="date-pill" style="background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald)">{date_display}</div>
 </header>
-
+ 
 <div class="kpi-strip">
   <div class="kpi" style="--accent:var(--emerald)">
     <div class="kpi-lbl">Elite Stocks</div>
@@ -924,7 +923,7 @@ def build_passing_ema10_dashboard(
   </div>
   {"<div class='kpi' style='--accent:var(--new-text)'><div class='kpi-lbl'>New Appearances</div><div class='kpi-val'>" + str(n_new) + "</div><div class='kpi-hint'>first time in 10 days</div></div>" if n_new else ""}
 </div>
-
+ 
 <div class="charts-area" style="grid-template-columns:1fr 1fr 1fr">
   <div class="chart-card">
     <div class="chart-lbl">Elite Stock Count — Daily</div>
@@ -939,7 +938,7 @@ def build_passing_ema10_dashboard(
     <div class="chart-wrap"><canvas id="tvChart" role="img" aria-label="Total traded value over time"></canvas></div>
   </div>
 </div>
-
+ 
 <div class="table-sec">
   <div class="tbl-head">
     <div>
@@ -974,9 +973,9 @@ def build_passing_ema10_dashboard(
     </table>
   </div>
 </div>
-
+ 
 <footer>Data: NSE India &amp; Yahoo Finance · Generated {date_display} · For informational purposes only · Not financial advice</footer>
-
+ 
 <script>
 const histLabels = [{hl_js}];
 const histCount  = [{hc_js}];
@@ -1023,15 +1022,15 @@ new Chart(document.getElementById('tvChart'), {{
 {_TABLE_SORT_JS}
 </script>
 </body></html>"""
-
+ 
     out_path.write_text(html, encoding="utf-8")
     logger.info("Elite dashboard → %s", out_path)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────────────────────
 #  VOLUME ACTION DASHBOARD
 # ─────────────────────────────────────────────────────────────────────────────
-
+ 
 def build_volume_action_dashboard(
     volume_df: pd.DataFrame,
     out_path: Path,
@@ -1041,7 +1040,7 @@ def build_volume_action_dashboard(
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
     known = known_symbols or set()
     rows = ""
-
+ 
     for _, row in volume_df.sort_values("relative_volume", ascending=False).iterrows():
         sym        = str(row.get("symbol", "")).replace(".NS", "")
         is_new     = sym not in known
@@ -1054,10 +1053,10 @@ def build_volume_action_dashboard(
         result_date = str(row.get("result_date", "—"))
         price_band  = str(row.get("price_band",  "—"))
         bull_snort  = row.get("bull_snort", False)
-
+ 
         close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
         rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
-
+ 
         try:
             rv = float(rel_vol)
             bar_pct = min(rv / 500 * 100, 100)
@@ -1067,11 +1066,11 @@ def build_volume_action_dashboard(
             else:          bar_col = "var(--emerald)"
         except Exception:
             bar_pct = 0; rv_s = "N/A"; bar_col = "var(--muted)"
-
+ 
         snort_cell = ('<span class="pill pill-amber" style="font-size:.65rem">🔥 SNORT</span>'
                       if bull_snort else
                       '<span style="color:var(--subtle);font-size:.74rem">—</span>')
-
+ 
         rows += f"""
         <tr class="srow{new_cls}"
           data-sym="{sym}" data-indgrp="{ind_grp}" data-ind="{industry}"
@@ -1095,10 +1094,10 @@ def build_volume_action_dashboard(
           <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{result_date}</td>
           <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{price_band}</td>
         </tr>"""
-
+ 
     n_new = sum(1 for _, r in volume_df.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
-
+ 
     html  = _html_head(f"Momentum Alpha — Volume Action — {date_display}",
                        "var(--blue)", "var(--indigo)")
     html += f"""
@@ -1117,7 +1116,7 @@ def build_volume_action_dashboard(
   </div>
   <div class="date-pill" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">{len(volume_df)} Stocks · {date_display}</div>
 </header>
-
+ 
 <div class="kpi-strip">
   <div class="kpi" style="--accent:var(--blue)">
     <div class="kpi-lbl">PPV Stocks</div>
@@ -1126,7 +1125,7 @@ def build_volume_action_dashboard(
   </div>
   {"<div class='kpi' style='--accent:var(--new-text)'><div class='kpi-lbl'>New Appearances</div><div class='kpi-val'>" + str(n_new) + "</div><div class='kpi-hint'>first time in 10 days</div></div>" if n_new else ""}
 </div>
-
+ 
 <div class="table-sec" style="padding-top:1.1rem">
   <div class="tbl-head">
     <div>
@@ -1159,23 +1158,23 @@ def build_volume_action_dashboard(
     </table>
   </div>
 </div>
-
+ 
 <footer>Data: NSE India &amp; Yahoo Finance · Generated {date_display} · For informational purposes only · Not financial advice</footer>
-
+ 
 <script>
 {_FILTER_JS}
 {_TABLE_SORT_JS}
 </script>
 </body></html>"""
-
+ 
     out_path.write_text(html, encoding="utf-8")
     logger.info("Volume action dashboard → %s", out_path)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ROCKET DASHBOARD
 # ─────────────────────────────────────────────────────────────────────────────
-
+ 
 def build_rocket_dashboard(
     passing: pd.DataFrame,
     out_path: Path,
@@ -1184,12 +1183,12 @@ def build_rocket_dashboard(
 ) -> None:
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
     known = known_symbols or set()
-
+ 
     rocket    = passing[passing["inside_bar"] == True].copy() \
                 if "inside_bar" in passing.columns else pd.DataFrame()
     n_rocket  = len(rocket)
     n_passing = len(passing)
-
+ 
     if n_rocket == 0:
         rows_html = f'<tr><td colspan="9" class="no-data">No Rocket Stocks today — no inside bars among {n_passing} passing stocks.</td></tr>'
     else:
@@ -1207,21 +1206,21 @@ def build_rocket_dashboard(
             hi52_pct = row.get("pct_from_52w_high", np.nan)
             lo52_pct = row.get("pct_above_52w_low", np.nan)
             ind_grp  = str(row.get("industry_group", "")) or "—"
-
+ 
             close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
             ema10_s = f"₹{float(ema10):,.2f}" if _safe(ema10) else "N/A"
             rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
             tmc_s   = fmt_cr(tmc)
             tv_s    = fmt_cr(tv)
-
+ 
             if not _safe(hi52_pct) and _safe(close) and _safe(row.get("52w_high")):
                 hi52_pct = (float(close) / float(row["52w_high"]) - 1) * 100
             if not _safe(lo52_pct) and _safe(close) and _safe(row.get("52w_low")):
                 lo52_pct = (float(close) / float(row["52w_low"]) - 1) * 100
-
+ 
             hi52_s = f"{float(hi52_pct):+.1f}%" if _safe(hi52_pct) else "N/A"
             lo52_s = f"{float(lo52_pct):+.1f}%" if _safe(lo52_pct) else "N/A"
-
+ 
             rows_html += f"""
             <tr class="srow{new_cls}"
               data-sym="{sym}" data-close="{_r(close)}" data-rs="{_r(rs)}"
@@ -1240,11 +1239,11 @@ def build_rocket_dashboard(
               <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">{tv_s}</td>
               <td style="color:var(--muted);font-size:.78rem">{ind_grp}</td>
             </tr>"""
-
+ 
     n_new = sum(1 for _, r in rocket.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known) if n_rocket > 0 else 0
     hit_rate = f"{100*n_rocket/n_passing:.1f}%" if n_passing > 0 else "N/A"
-
+ 
     html  = _html_head(f"Momentum Alpha — Rocket Stocks — {date_display}",
                        "var(--amber)", "var(--red)")
     html += f"""
@@ -1264,7 +1263,7 @@ def build_rocket_dashboard(
   </div>
   <div class="date-pill" style="background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber)">{date_display}</div>
 </header>
-
+ 
 <div class="kpi-strip">
   <div class="kpi" style="--accent:var(--amber)">
     <div class="kpi-lbl">Rocket Stocks</div>
@@ -1283,13 +1282,13 @@ def build_rocket_dashboard(
   </div>
   {"<div class='kpi' style='--accent:var(--new-text)'><div class='kpi-lbl'>New Appearances</div><div class='kpi-val'>" + str(n_new) + "</div><div class='kpi-hint'>first time in 10 days</div></div>" if n_new else ""}
 </div>
-
+ 
 <div class="callout">
   <strong style="color:var(--amber)">Inside Bar:</strong>
   Today's high &lt; yesterday's high <strong>AND</strong> today's low &gt; yesterday's low —
   price compression inside a strong uptrend. Potential coiling setup before breakout.
 </div>
-
+ 
 <div class="table-sec" style="padding-top:1.1rem">
   <div class="tbl-head">
     <div>
@@ -1321,23 +1320,23 @@ def build_rocket_dashboard(
     </table>
   </div>
 </div>
-
+ 
 <footer>Data: NSE India &amp; Yahoo Finance · Generated {date_display} · For informational purposes only · Not financial advice</footer>
-
+ 
 <script>
 {_FILTER_JS}
 {_TABLE_SORT_JS}
 </script>
 </body></html>"""
-
+ 
     out_path.write_text(html, encoding="utf-8")
     logger.info("Rocket dashboard → %s  (%d stocks)", out_path, n_rocket)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────────────────────
 #  MAIN INDEX PAGE
 # ─────────────────────────────────────────────────────────────────────────────
-
+ 
 def build_main_index(
     passing_path="passing_dashboard.html",
     elite_path="elite_dashboard.html",
@@ -1350,23 +1349,20 @@ def build_main_index(
 <head>
 <meta charset="utf-8">
 <title>Momentum Alpha Dashboard</title>
-<link href="{_GOOGLE_FONTS}" rel="stylesheet"/>
 <style>
 :root {{
-  --bg:#f7f8fc; --surface:#fff; --border:#e2e6f0;
-  --text:#0f1629; --muted:#5a6282;
-  --sans:'Outfit',system-ui,sans-serif; --mono:'DM Mono',monospace;
+  --bg:#ffffff; --surface:#ffffff; --border:#e2e6f0;
+  --text:#000000; --muted:#5a6282;
+  --sans:system-ui,sans-serif; --mono:monospace;
 }}
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 body{{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:2.5rem}}
-.topbar{{height:3px;background:linear-gradient(90deg,#4f46e5,#06b6d4);margin:-2.5rem -2.5rem 2rem;}}
 h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}}
 .sub{{color:var(--muted);font-size:.85rem;margin-bottom:2rem;font-family:var(--mono)}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}}
 .card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;
        padding:1.4rem 1.6rem;position:relative;overflow:hidden;transition:box-shadow .15s}}
 .card:hover{{box-shadow:0 4px 20px rgba(0,0,0,.07)}}
-.card::before{{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c)}}
 .card-icon{{font-size:1.4rem;margin-bottom:.6rem}}
 .card h2{{font-size:1rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.3rem}}
 .card p{{font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5}}
@@ -1376,11 +1372,10 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
 </style>
 </head>
 <body>
-<div class="topbar"></div>
 <h1>Momentum Alpha</h1>
 <p class="sub">// NSE Minervini Trend Scanner · India</p>
 <div class="grid">
-  <div class="card" style="--c:#4f46e5">
+  <div class="card">
     <div class="card-icon">📊</div>
     <h2>Passing Stocks</h2>
     <p>All 8 Minervini conditions met — the core universe of momentum candidates.</p>
@@ -1388,7 +1383,7 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
       Open Dashboard →
     </a>
   </div>
-  <div class="card" style="--c:#059669">
+  <div class="card">
     <div class="card-icon">⭐</div>
     <h2>Elite Stocks</h2>
     <p>All 8 conditions + Close above EMA10 — highest-quality momentum stocks.</p>
@@ -1396,7 +1391,7 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
       Open Dashboard →
     </a>
   </div>
-  <div class="card" style="--c:#2563eb">
+  <div class="card">
     <div class="card-icon">📈</div>
     <h2>Volume Action</h2>
     <p>Pocket pivot volume events — institutional accumulation signals.</p>
@@ -1404,7 +1399,7 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
       Open Dashboard →
     </a>
   </div>
-  <div class="card" style="--c:#d97706">
+  <div class="card">
     <div class="card-icon">🚀</div>
     <h2>Rocket Stocks</h2>
     <p>All 8 conditions + Inside Bar — price coiling for potential breakout.</p>
@@ -1414,6 +1409,6 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
   </div>
 </div>
 </body></html>"""
-
+ 
     Path(out_path).write_text(html, encoding="utf-8")
     logger.info("Main index page → %s", out_path)

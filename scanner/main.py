@@ -48,8 +48,22 @@ COND_COLS = [
 ]
 
 def run() -> None:
-    today_str    = datetime.today().strftime("%Y%m%d")
-    date_display = datetime.today().strftime("%Y-%m-%d")
+    today        = datetime.today()
+    today_str    = today.strftime("%Y%m%d")
+    date_display = today.strftime("%Y-%m-%d")
+
+    # ── Weekend guard ─────────────────────────────────────────────────────────
+    # NSE markets are closed on Saturday (5) and Sunday (6).
+    # Skip the scan entirely if today is a weekend day.
+    weekday = today.weekday()  # Monday=0 … Sunday=6
+    if weekday >= 5:
+        day_name = today.strftime("%A")
+        logger.warning(
+            "Today is %s (%s) — NSE markets are closed on weekends. "
+            "Scan skipped. No data will be generated.",
+            day_name, date_display,
+        )
+        sys.exit(0)
 
     # ── Output directory (GitHub Pages root + dated sub-folder) ──────────────
     out_dir = Path(DOCS_DIR) / date_display
@@ -248,26 +262,56 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
         reverse=True,
     )
 
-    rows = ""
+    # Group dated_dirs by month for the index page
+    from collections import OrderedDict
+    months_map: dict[str, list] = OrderedDict()
     for d in dated_dirs:
-        date_label = d.name
         try:
-            date_label = datetime.strptime(d.name, "%Y-%m-%d").strftime("%d %b %Y")
+            dt = datetime.strptime(d.name, "%Y-%m-%d")
+            month_key = dt.strftime("%B %Y")
         except ValueError:
-            pass
+            month_key = "Other"
+        months_map.setdefault(month_key, []).append(d)
 
-        slug         = d.name.replace("-", "")
-        passing_link = f"{d.name}/dashboard_{slug}.html"
-        elite_link   = f"{base}/{d.name}/elite_dashboard_{slug}.html"
+    month_groups_html = ""
+    for month_key, month_dirs in months_map.items():
+        table_rows = ""
+        for d in month_dirs:
+            date_label = d.name
+            try:
+                date_label = datetime.strptime(d.name, "%Y-%m-%d").strftime("%d %b %Y")
+            except ValueError:
+                pass
 
-        rows += f"""
+            slug         = d.name.replace("-", "")
+            passing_link = f"{d.name}/dashboard_{slug}.html"
+            elite_link   = f"{base}/{d.name}/elite_dashboard_{slug}.html"
+
+            table_rows += f"""
         <tr>
           <td class="date-cell">{date_label}</td>
-          <td><a href="{passing_link}" class="btn-link">📊 Momentum Stocks</a></td>
-          <td><a href="{elite_link}"   class="btn-link green">⚡ Elite Stocks</a></td>
-          <td><a href="{d.name}/volume_dashboard_{slug}.html" class="btn-link">🔵 Volume Action</a></td>
-          <td><a href="{d.name}/rocket_dashboard_{slug}.html" class="btn-link" style="background:#fff7ed;border-color:#fdba74;color:#c2410c">🚀 Rocket Stocks</a></td>
+          <td><a href="{passing_link}" class="btn-link">📊 Momentum</a></td>
+          <td><a href="{elite_link}"   class="btn-link green">⚡ Elite</a></td>
+          <td><a href="{d.name}/volume_dashboard_{slug}.html" class="btn-link blue">🔵 Volume</a></td>
+          <td><a href="{d.name}/rocket_dashboard_{slug}.html" class="btn-link amber">🚀 Rocket</a></td>
         </tr>"""
+
+        month_groups_html += f"""
+  <div class="month-group">
+    <div class="month-label">{month_key}</div>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Minervini Trend Template</th>
+          <th>Above EMA10 (Elite)</th>
+          <th>Volume Action</th>
+          <th>Rocket Stocks</th>
+        </tr>
+      </thead>
+      <tbody>{table_rows}</tbody>
+    </table>
+  </div>"""
 
     # ── Build Market Sentiment HTML block ─────────────────────────────────────
     sentiment_html = _build_sentiment_html(sentiment or {})
@@ -278,102 +322,111 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Momentum Alpha \u2014 NSE Trend Scanner</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   :root{{
-    --bg:#f5f3ef;--surface:#fff;--border:#e4e0d8;--text:#1c1917;--muted:#78716c;
-    --blue:#2563eb;--blue-bg:#eff6ff;--blue-mid:#bfdbfe;
-    --emerald:#059669;--green-bg:#f0fdf4;--green-mid:#86efac;
-    --amber:#b45309;--red:#dc2626;--green:#15803d;
-    --sans:'Inter',sans-serif;--serif:'Playfair Display',Georgia,serif;
+    --bg:#f7f8fc;--surface:#fff;--border:#e2e6f0;--border2:#ccd1e4;
+    --text:#0f1629;--muted:#5a6282;--subtle:#8b93b5;
+    --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
+    --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
+    --blue:#2563eb;--blue-lt:#eff6ff;--blue-mid:#bfdbfe;
+    --amber:#d97706;--amber-lt:#fffbeb;--amber-mid:#fde68a;
+    --red:#dc2626;--red-lt:#fef2f2;
+    --sans:'Outfit',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;
   }}
   *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0;}}
-  body{{background:var(--bg);color:var(--text);font-family:var(--sans);}}
+  html{{font-size:14px;}}
+  body{{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}}
+  .topbar{{height:3px;background:linear-gradient(90deg,#4f46e5,#059669);}}
   header{{background:var(--surface);border-bottom:1px solid var(--border);
-          padding:2.5rem 3rem;text-align:center;}}
-  .logo-dot{{display:inline-block;width:10px;height:10px;border-radius:50%;
-             background:var(--emerald);margin-right:.4rem;vertical-align:middle;}}
-  header h1{{font-family:var(--serif);font-size:2.4rem;font-weight:600;
-             letter-spacing:-.02em;margin:.4rem 0;}}
-  header p{{color:var(--muted);font-size:.9rem;}}
-  .container{{max-width:1120px;margin:2.5rem auto;padding:0 1.5rem;}}
-  h2.section-title{{font-family:var(--serif);font-size:1.3rem;margin-bottom:1rem;}}
+          padding:2rem 3rem 1.6rem;text-align:center;}}
+  .brand-name-idx{{font-family:var(--mono);font-size:.65rem;font-weight:500;
+                   letter-spacing:.14em;text-transform:uppercase;color:var(--emerald);
+                   display:flex;align-items:center;justify-content:center;gap:.4rem;margin-bottom:.4rem;}}
+  .brand-dot{{width:8px;height:8px;border-radius:50%;background:var(--emerald);}}
+  header h1{{font-family:var(--sans);font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;
+             letter-spacing:-.03em;color:var(--text);margin:.25rem 0;}}
+  header p{{color:var(--muted);font-size:.83rem;font-family:var(--mono);}}
+  .container{{max-width:1120px;margin:2rem auto;padding:0 1.5rem;}}
+  h2.section-title{{font-family:var(--sans);font-size:1.05rem;font-weight:700;
+                    letter-spacing:-.01em;margin-bottom:1rem;color:var(--text);}}
+  /* Month group headers */
+  .month-group{{margin-bottom:2rem;}}
+  .month-label{{font-family:var(--mono);font-size:.68rem;font-weight:600;
+                letter-spacing:.12em;text-transform:uppercase;color:var(--subtle);
+                padding:.5rem 0 .4rem;margin-bottom:.5rem;
+                border-bottom:1px solid var(--border);}}
   /* Scan history table */
   table.history-table{{width:100%;border-collapse:collapse;background:var(--surface);
-         border:1px solid var(--border);border-radius:14px;overflow:hidden;}}
-  .history-table th{{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
-      color:var(--muted);padding:.8rem 1.2rem;text-align:left;
-      background:#faf9f7;border-bottom:1px solid var(--border);}}
-  .history-table td{{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);font-size:.88rem;}}
+         border:1px solid var(--border);border-radius:12px;overflow:hidden;}}
+  .history-table th{{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--muted);padding:.7rem 1.1rem;text-align:left;
+      background:#f1f3f9;border-bottom:1px solid var(--border);}}
+  .history-table td{{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);font-size:.85rem;}}
   .history-table tr:last-child td{{border-bottom:none;}}
-  .date-cell{{font-weight:600;}}
-  .btn-link{{display:inline-block;padding:.3rem .9rem;border-radius:999px;
-             font-size:.78rem;font-weight:600;background:var(--blue-bg);
-             border:1px solid var(--blue-mid);color:var(--blue);
-             text-decoration:none;transition:background .15s;}}
+  .history-table tr:hover td{{background:var(--bg);}}
+  .date-cell{{font-family:var(--mono);font-weight:600;font-size:.8rem;color:var(--text);}}
+  .btn-link{{display:inline-block;padding:.28rem .85rem;border-radius:999px;
+             font-family:var(--mono);font-size:.72rem;font-weight:500;
+             background:var(--indigo-lt);border:1px solid var(--indigo-mid);color:var(--indigo);
+             text-decoration:none;transition:background .14s;letter-spacing:.03em;}}
   .btn-link:hover{{background:#dbeafe;}}
-  .btn-link.green{{background:var(--green-bg);border-color:var(--green-mid);color:var(--emerald);}}
-  .btn-link.green:hover{{background:#dcfce7;}}
-  footer{{text-align:center;padding:2rem;font-size:.72rem;color:var(--muted);
-          border-top:1px solid var(--border);margin-top:3rem;}}
+  .btn-link.green{{background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald);}}
+  .btn-link.green:hover{{background:#d1fae5;}}
+  .btn-link.amber{{background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber);}}
+  .btn-link.amber:hover{{background:#fef3c7;}}
+  .btn-link.blue{{background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue);}}
+  .btn-link.blue:hover{{background:#dbeafe;}}
+  footer{{text-align:center;padding:1.5rem;font-family:var(--mono);font-size:.68rem;
+          color:var(--subtle);border-top:1px solid var(--border);
+          background:var(--surface);letter-spacing:.04em;margin-top:3rem;}}
 
   /* ── Market Sentiment ── */
-  .sentiment-section{{max-width:1120px;margin:0 auto 2.5rem;padding:0 1.5rem;}}
-  .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;margin-top:1rem;}}
-  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:14px;
-                   padding:1.4rem 1.6rem;}}
-  .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}}
-  .sentiment-index-name{{font-weight:700;font-size:.95rem;}}
-  .overall-badge{{display:inline-block;padding:.25rem .85rem;border-radius:999px;
-                  font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}}
-  .overall-badge.bullish{{background:#f0fdf4;border:1px solid #86efac;color:#15803d;}}
-  .overall-badge.bearish{{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;}}
-  .overall-badge.mixed{{background:#fffbeb;border:1px solid #fde68a;color:#b45309;}}
-  .overall-badge.unavailable{{background:#f8fafc;border:1px solid #e2e8f0;color:#94a3b8;}}
-  .ema-row{{display:flex;gap:.75rem;flex-wrap:wrap;}}
-  .ema-pill{{display:flex;align-items:center;gap:.4rem;padding:.35rem .85rem;
-             border-radius:999px;font-size:.78rem;font-weight:600;border:1px solid;}}
-  .ema-pill.green{{background:#f0fdf4;border-color:#86efac;color:#15803d;}}
-  .ema-pill.red{{background:#fef2f2;border-color:#fca5a5;color:#dc2626;}}
-  .ema-pill.na{{background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;}}
-  .ema-dot{{width:7px;height:7px;border-radius:50%;flex-shrink:0;}}
-  .ema-dot.green{{background:#15803d;}}
-  .ema-dot.red{{background:#dc2626;}}
-  .ema-dot.na{{background:#94a3b8;}}
-  .close-val{{font-size:.8rem;color:var(--muted);margin-bottom:.75rem;}}
+  .sentiment-section{{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}}
+  .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.1rem;margin-top:.85rem;}}
+  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+                   padding:1.3rem 1.5rem;}}
+  .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}}
+  .sentiment-index-name{{font-weight:700;font-size:.9rem;letter-spacing:-.01em;}}
+  .overall-badge{{display:inline-block;padding:.22rem .8rem;border-radius:999px;
+                  font-family:var(--mono);font-size:.67rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;}}
+  .overall-badge.bullish{{background:var(--emerald-lt);border:1px solid var(--emerald-mid);color:var(--emerald);}}
+  .overall-badge.bearish{{background:var(--red-lt);border:1px solid #fca5a5;color:var(--red);}}
+  .overall-badge.mixed{{background:var(--amber-lt);border:1px solid var(--amber-mid);color:var(--amber);}}
+  .overall-badge.unavailable{{background:#f8fafc;border:1px solid #e2e8f0;color:var(--subtle);}}
+  .ema-row{{display:flex;gap:.65rem;flex-wrap:wrap;}}
+  .ema-pill{{display:flex;align-items:center;gap:.35rem;padding:.3rem .8rem;
+             border-radius:999px;font-family:var(--mono);font-size:.73rem;font-weight:500;border:1px solid;}}
+  .ema-pill.green{{background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald);}}
+  .ema-pill.red{{background:var(--red-lt);border-color:#fca5a5;color:var(--red);}}
+  .ema-pill.na{{background:#f8fafc;border-color:#e2e8f0;color:var(--subtle);}}
+  .ema-dot{{width:6px;height:6px;border-radius:50%;flex-shrink:0;}}
+  .ema-dot.green{{background:var(--emerald);}}
+  .ema-dot.red{{background:var(--red);}}
+  .ema-dot.na{{background:var(--subtle);}}
+  .close-val{{font-family:var(--mono);font-size:.77rem;color:var(--muted);margin-bottom:.7rem;}}
   .close-val strong{{color:var(--text);}}
-  .sentiment-legend{{font-size:.72rem;color:var(--muted);margin-top:.6rem;}}
+  .sentiment-legend{{font-family:var(--mono);font-size:.67rem;color:var(--subtle);margin-top:.55rem;}}
   </style>
 </head>
 <body>
+<div class="topbar"></div>
 <header>
-  <span class="logo-dot"></span>
-  <span style="font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--emerald)">Momentum Alpha</span>
+  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
   <h1>NSE Trend Scanner</h1>
-  <p>Daily Minervini trend-template scans \u00b7 Free-float &amp; liquidity data \u00b7 NSE India</p>
+  <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
 </header>
 
 {sentiment_html}
 
 <div class="container">
   <h2 class="section-title">Scan History</h2>
-  <table class="history-table">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Minervini Trend Template Stocks</th>
-        <th>Minervini Trend Template Stocks (Above EMA10)</th>
-        <th>Volume Action Stocks</th>
-        <th>Rocket Stocks</th>
-      </tr>
-    </thead>
-    <tbody>{rows}</tbody>
-  </table>
+  {month_groups_html}
 </div>
 <footer>
-  Data sourced from NSE India &amp; Yahoo Finance &nbsp;\u00b7&nbsp;
-  Updated daily at 18:00 IST &nbsp;\u00b7&nbsp;
-  For informational purposes only \u2014 not financial advice
+  Data sourced from NSE India &amp; Yahoo Finance &nbsp;·&nbsp;
+  Updated daily at 18:00 IST &nbsp;·&nbsp;
+  For informational purposes only — not financial advice
 </footer>
 </body>
 </html>"""

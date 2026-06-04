@@ -163,17 +163,22 @@ def run() -> None:
         elite_csv = dated_dir / f"passing_ema10_{dir_slug}.csv"
         if elite_csv.exists():
             try:
-                hist_df = pd.read_csv(elite_csv)
-                mc = float(hist_df["total_market_cap_cr"].dropna().sum()) \
-                     if "total_market_cap_cr" in hist_df.columns else 0.0
-                tv = float(hist_df["traded_value_cr"].dropna().sum()) \
-                     if "traded_value_cr" in hist_df.columns else 0.0
-                history.append({
-                    "date":            dir_slug,
-                    "count":           len(hist_df),
-                    "market_cap_cr":   mc,
-                    "traded_value_cr": tv,
-                })
+                # Skip weekends — NSE is closed Saturday/Sunday
+                _dir_dt = datetime.strptime(dir_slug, "%Y%m%d")
+                if _dir_dt.weekday() >= 5:
+                    logger.debug("Skipping weekend date %s from elite history", dir_slug)
+                else:
+                    hist_df = pd.read_csv(elite_csv)
+                    mc = float(hist_df["total_market_cap_cr"].dropna().sum()) \
+                         if "total_market_cap_cr" in hist_df.columns else 0.0
+                    tv = float(hist_df["traded_value_cr"].dropna().sum()) \
+                         if "traded_value_cr"     in hist_df.columns else 0.0
+                    history.append({
+                        "date":            dir_slug,
+                        "count":           len(hist_df),
+                        "market_cap_cr":   mc,
+                        "traded_value_cr": tv,
+                    })
             except Exception as exc:
                 logger.warning("Could not read elite history from %s: %s", elite_csv, exc)
         # ── known_symbols: scan passing_stocks CSVs from last 10 days ────────
@@ -298,19 +303,25 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 
         month_groups_html += f"""
   <div class="month-group">
-    <div class="month-label">{month_key}</div>
-    <table class="history-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Minervini Trend Template</th>
-          <th>Above EMA10 (Elite)</th>
-          <th>Volume Action</th>
-          <th>Rocket Stocks</th>
-        </tr>
-      </thead>
-      <tbody>{table_rows}</tbody>
-    </table>
+    <button class="month-accordion" onclick="toggleMonth(this)" aria-expanded="true">
+      <span class="month-acc-label">{month_key}</span>
+      <span class="month-acc-meta">{len(month_dirs)} scan{'s' if len(month_dirs) != 1 else ''}</span>
+      <span class="month-acc-chevron">&#8963;</span>
+    </button>
+    <div class="month-body open">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Minervini Trend Template</th>
+            <th>Above EMA10 (Elite)</th>
+            <th>Volume Action</th>
+            <th>Rocket Stocks</th>
+          </tr>
+        </thead>
+        <tbody>{table_rows}</tbody>
+      </table>
+    </div>
   </div>"""
 
     # ── Build Market Sentiment HTML block ─────────────────────────────────────
@@ -322,101 +333,125 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Momentum Alpha \u2014 NSE Trend Scanner</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   :root{{
-    --bg:#ffffff;--surface:#ffffff;--surface2:#f8f9fb;--border:#e8eaef;
-    --text:#111827;--muted:#6b7280;--subtle:#9ca3af;
-    --indigo:#4f46e5;--indigo-lt:#eef2ff;--indigo-mid:#c7d2fe;
+    --bg:#f7f8fc;--surface:#fff;--border:#e2e6f0;--border2:#ccd1e4;
+    --text:#0f1629;--muted:#5a6282;--subtle:#8b93b5;
+    --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
     --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
     --blue:#2563eb;--blue-lt:#eff6ff;--blue-mid:#bfdbfe;
     --amber:#d97706;--amber-lt:#fffbeb;--amber-mid:#fde68a;
     --red:#dc2626;--red-lt:#fef2f2;
-    --sans:'Inter',system-ui,sans-serif;--serif:'Playfair Display',Georgia,serif;
+    --sans:'Outfit',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;
   }}
   *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0;}}
-  html{{font-size:15px;}}
-  body{{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;}}
+  html{{font-size:14px;}}
+  body{{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}}
   .topbar{{height:3px;background:linear-gradient(90deg,#4f46e5,#059669);}}
-  header{{background:#fff;border-bottom:1px solid var(--border);padding:2.8rem 3rem 2.2rem;text-align:center;}}
-  .logo-eyebrow{{display:inline-flex;align-items:center;gap:.4rem;
-                 font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
-                 color:var(--emerald);margin-bottom:.55rem;}}
-  .logo-dot{{width:7px;height:7px;border-radius:50%;background:var(--emerald);}}
-  header h1{{font-family:var(--serif);font-size:clamp(1.9rem,3.5vw,2.6rem);font-weight:600;
-             letter-spacing:-.02em;color:var(--text);margin:.1rem 0 .5rem;}}
-  header p{{color:var(--muted);font-size:.88rem;font-family:var(--sans);}}
-  .container{{max-width:1160px;margin:2.5rem auto;padding:0 1.75rem;}}
-  h2.section-title{{font-family:var(--serif);font-size:1.35rem;font-weight:600;
-                    letter-spacing:-.01em;margin-bottom:1.25rem;color:var(--text);}}
-  /* Month groups */
-  .month-group{{margin-bottom:2.5rem;}}
-  .month-label{{font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-                color:var(--subtle);padding-bottom:.5rem;margin-bottom:.65rem;
-                border-bottom:2px solid var(--border);}}
-  /* History table */
-  table.history-table{{width:100%;border-collapse:collapse;background:#fff;
-         border:1px solid var(--border);border-radius:12px;overflow:hidden;
-         box-shadow:0 1px 4px rgba(0,0,0,.04);}}
-  .history-table th{{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.09em;
-      color:var(--muted);padding:.85rem 1.3rem;text-align:left;
-      background:var(--surface2);border-bottom:1px solid var(--border);}}
-  .history-table td{{padding:.95rem 1.3rem;border-bottom:1px solid var(--border);
-                     font-size:.88rem;color:var(--text);}}
-  .history-table tbody tr:last-child td{{border-bottom:none;}}
-  .history-table tbody tr:hover td{{background:#fafbfc;}}
-  .date-cell{{font-weight:600;font-size:.87rem;color:var(--text);letter-spacing:.01em;}}
-  /* Dashboard link buttons */
-  .btn-link{{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .9rem;
-             border-radius:6px;font-size:.78rem;font-weight:500;
+  header{{background:var(--surface);border-bottom:1px solid var(--border);
+          padding:2rem 3rem 1.6rem;text-align:center;}}
+  .brand-name-idx{{font-family:var(--mono);font-size:.65rem;font-weight:500;
+                   letter-spacing:.14em;text-transform:uppercase;color:var(--emerald);
+                   display:flex;align-items:center;justify-content:center;gap:.4rem;margin-bottom:.4rem;}}
+  .brand-dot{{width:8px;height:8px;border-radius:50%;background:var(--emerald);}}
+  header h1{{font-family:var(--sans);font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;
+             letter-spacing:-.03em;color:var(--text);margin:.25rem 0;}}
+  header p{{color:var(--muted);font-size:.83rem;font-family:var(--mono);}}
+  .container{{max-width:1120px;margin:2rem auto;padding:0 1.5rem;}}
+  h2.section-title{{font-family:var(--sans);font-size:1.05rem;font-weight:700;
+                    letter-spacing:-.01em;margin-bottom:1rem;color:var(--text);}}
+  /* Month accordion */
+  .month-group{{margin-bottom:1.1rem;}}
+  .month-accordion{{
+    width:100%;display:flex;align-items:center;gap:.75rem;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:.85rem 1.2rem;cursor:pointer;
+    font-family:var(--sans);font-size:.92rem;font-weight:600;color:var(--text);
+    letter-spacing:-.01em;text-align:left;
+    transition:background .15s,box-shadow .15s;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }}
+  .month-accordion:hover{{background:var(--surface2);box-shadow:0 2px 8px rgba(0,0,0,.07);}}
+  .month-accordion[aria-expanded="true"]{{
+    border-bottom-left-radius:0;border-bottom-right-radius:0;
+    border-bottom-color:transparent;
+    background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo);
+  }}
+  .month-acc-label{{flex:1;}}
+  .month-acc-meta{{font-family:var(--mono);font-size:.67rem;font-weight:500;
+                   color:var(--subtle);letter-spacing:.04em;}}
+  .month-accordion[aria-expanded="true"] .month-acc-meta{{color:var(--indigo);opacity:.7;}}
+  .month-acc-chevron{{font-size:.8rem;transition:transform .3s cubic-bezier(.4,0,.2,1);display:inline-block;}}
+  .month-accordion[aria-expanded="false"] .month-acc-chevron{{transform:rotate(180deg);}}
+  .month-body{{
+    overflow:hidden;
+    max-height:2000px;
+    transition:max-height .38s cubic-bezier(.4,0,.2,1), opacity .28s ease;
+    opacity:1;
+    border:1px solid var(--indigo-mid);
+    border-top:none;
+    border-bottom-left-radius:10px;border-bottom-right-radius:10px;
+  }}
+  .month-body:not(.open){{max-height:0;opacity:0;border-color:transparent;}}
+  /* Scan history table */
+  table.history-table{{width:100%;border-collapse:collapse;background:var(--surface);overflow:hidden;}}
+  .history-table th{{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--muted);padding:.7rem 1.1rem;text-align:left;
+      background:#f1f3f9;border-bottom:1px solid var(--border);}}
+  .history-table td{{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);font-size:.85rem;}}
+  .history-table tr:last-child td{{border-bottom:none;}}
+  .history-table tr:hover td{{background:var(--bg);}}
+  .date-cell{{font-family:var(--mono);font-weight:600;font-size:.8rem;color:var(--text);}}
+  .btn-link{{display:inline-block;padding:.28rem .85rem;border-radius:999px;
+             font-family:var(--mono);font-size:.72rem;font-weight:500;
              background:var(--indigo-lt);border:1px solid var(--indigo-mid);color:var(--indigo);
-             text-decoration:none;transition:background .13s,box-shadow .13s;white-space:nowrap;}}
-  .btn-link:hover{{background:#e0e7ff;box-shadow:0 1px 4px rgba(79,70,229,.12);}}
+             text-decoration:none;transition:background .14s;letter-spacing:.03em;}}
+  .btn-link:hover{{background:#dbeafe;}}
   .btn-link.green{{background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald);}}
-  .btn-link.green:hover{{background:#d1fae5;box-shadow:0 1px 4px rgba(5,150,105,.12);}}
+  .btn-link.green:hover{{background:#d1fae5;}}
   .btn-link.amber{{background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber);}}
-  .btn-link.amber:hover{{background:#fef3c7;box-shadow:0 1px 4px rgba(217,119,6,.12);}}
+  .btn-link.amber:hover{{background:#fef3c7;}}
   .btn-link.blue{{background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue);}}
-  .btn-link.blue:hover{{background:#dbeafe;box-shadow:0 1px 4px rgba(37,99,235,.12);}}
-  footer{{text-align:center;padding:1.75rem;font-size:.75rem;color:var(--subtle);
-          border-top:1px solid var(--border);background:#fff;margin-top:3rem;
-          font-family:var(--sans);letter-spacing:.02em;}}
+  .btn-link.blue:hover{{background:#dbeafe;}}
+  footer{{text-align:center;padding:1.5rem;font-family:var(--mono);font-size:.68rem;
+          color:var(--subtle);border-top:1px solid var(--border);
+          background:var(--surface);letter-spacing:.04em;margin-top:3rem;}}
 
   /* ── Market Sentiment ── */
-  .sentiment-section{{max-width:1160px;margin:0 auto 2rem;padding:0 1.75rem;}}
-  .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-                   gap:1.1rem;margin-top:1rem;}}
-  .sentiment-card{{background:#fff;border:1px solid var(--border);border-radius:12px;
-                   padding:1.35rem 1.5rem;box-shadow:0 1px 4px rgba(0,0,0,.04);}}
-  .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;}}
-  .sentiment-index-name{{font-weight:600;font-size:.95rem;color:var(--text);letter-spacing:-.01em;}}
-  .overall-badge{{display:inline-block;padding:.22rem .85rem;border-radius:6px;
-                  font-size:.72rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;}}
+  .sentiment-section{{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}}
+  .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.1rem;margin-top:.85rem;}}
+  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+                   padding:1.3rem 1.5rem;}}
+  .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}}
+  .sentiment-index-name{{font-weight:700;font-size:.9rem;letter-spacing:-.01em;}}
+  .overall-badge{{display:inline-block;padding:.22rem .8rem;border-radius:999px;
+                  font-family:var(--mono);font-size:.67rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;}}
   .overall-badge.bullish{{background:var(--emerald-lt);border:1px solid var(--emerald-mid);color:var(--emerald);}}
   .overall-badge.bearish{{background:var(--red-lt);border:1px solid #fca5a5;color:var(--red);}}
   .overall-badge.mixed{{background:var(--amber-lt);border:1px solid var(--amber-mid);color:var(--amber);}}
-  .overall-badge.unavailable{{background:#f9fafb;border:1px solid #e5e7eb;color:var(--subtle);}}
-  .ema-row{{display:flex;gap:.6rem;flex-wrap:wrap;}}
+  .overall-badge.unavailable{{background:#f8fafc;border:1px solid #e2e8f0;color:var(--subtle);}}
+  .ema-row{{display:flex;gap:.65rem;flex-wrap:wrap;}}
   .ema-pill{{display:flex;align-items:center;gap:.35rem;padding:.3rem .8rem;
-             border-radius:6px;font-size:.78rem;font-weight:500;border:1px solid;}}
+             border-radius:999px;font-family:var(--mono);font-size:.73rem;font-weight:500;border:1px solid;}}
   .ema-pill.green{{background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald);}}
   .ema-pill.red{{background:var(--red-lt);border-color:#fca5a5;color:var(--red);}}
-  .ema-pill.na{{background:#f9fafb;border-color:#e5e7eb;color:var(--subtle);}}
+  .ema-pill.na{{background:#f8fafc;border-color:#e2e8f0;color:var(--subtle);}}
   .ema-dot{{width:6px;height:6px;border-radius:50%;flex-shrink:0;}}
   .ema-dot.green{{background:var(--emerald);}}
   .ema-dot.red{{background:var(--red);}}
   .ema-dot.na{{background:var(--subtle);}}
-  .close-val{{font-size:.82rem;color:var(--muted);margin-bottom:.7rem;}}
-  .close-val strong{{color:var(--text);font-weight:600;}}
-  .sentiment-legend{{font-size:.73rem;color:var(--subtle);margin-top:.55rem;}}
+  .close-val{{font-family:var(--mono);font-size:.77rem;color:var(--muted);margin-bottom:.7rem;}}
+  .close-val strong{{color:var(--text);}}
+  .sentiment-legend{{font-family:var(--mono);font-size:.67rem;color:var(--subtle);margin-top:.55rem;}}
   </style>
 </head>
 <body>
 <div class="topbar"></div>
 <header>
-  <div class="logo-eyebrow"><span class="logo-dot"></span>Momentum Alpha</div>
+  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
   <h1>NSE Trend Scanner</h1>
-  <p>Daily Minervini trend-template scans &nbsp;·&nbsp; Free-float &amp; liquidity data &nbsp;·&nbsp; NSE India</p>
+  <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
 </header>
 
 {sentiment_html}
@@ -430,6 +465,14 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
   Updated daily at 18:00 IST &nbsp;·&nbsp;
   For informational purposes only — not financial advice
 </footer>
+<script>
+function toggleMonth(btn) {{
+  const body = btn.nextElementSibling;
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  btn.setAttribute('aria-expanded', String(!open));
+}}
+</script>
 </body>
 </html>"""
 

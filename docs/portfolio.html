@@ -8,7 +8,6 @@
 
 <link rel="stylesheet" href="css/portfolio.css">
 
-<script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/portfolio.js"></script>
 </head>
 
@@ -16,6 +15,16 @@
 
 <header>
     <h1>Portfolio Risk Tracker</h1>
+
+    <div class="top-buttons">
+        <a href="index.html" class="home-btn">
+            ← Scanner Dashboard
+        </a>
+
+        <button id="loginBtn">
+            Login with Google
+        </button>
+    </div>
 </header>
 
 <section class="summary">
@@ -44,13 +53,9 @@
 
 <section class="settings">
 
-<input id="portfolioSize"
-type="number"
-placeholder="Portfolio Size">
+<input id="portfolioSize" type="number" placeholder="Portfolio Size">
 
-<input id="riskPct"
-type="number"
-placeholder="Risk %">
+<input id="riskPct" type="number" placeholder="Risk Per Trade %">
 
 </section>
 
@@ -58,13 +63,9 @@ placeholder="Risk %">
 
 <input id="symbol" placeholder="TCS.NS">
 
-<input id="entry"
-type="number"
-placeholder="Entry">
+<input id="entry" type="number" placeholder="Entry Price">
 
-<input id="stop"
-type="number"
-placeholder="Stop Loss">
+<input id="stop" type="number" placeholder="Stop Loss">
 
 <button id="addBtn">
 Add Position
@@ -73,17 +74,14 @@ Add Position
 </section>
 
 <table>
-
 <thead>
 <tr>
 <th>Symbol</th>
-<th>Price</th>
 <th>Entry</th>
 <th>SL</th>
 <th>Qty</th>
-<th>P&L%</th>
-<th>R</th>
-<th></th>
+<th>Risk/Share</th>
+<th>Delete</th>
 </tr>
 </thead>
 

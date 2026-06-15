@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Momentum Alpha — Passing Stocks — 15 Jun 2026</title>
+<title>Momentum Alpha — Volume Action — 15 Jun 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-:root { --ACCENT1:var(--indigo); --ACCENT2:var(--blue); }
+:root { --ACCENT1:var(--blue); --ACCENT2:var(--indigo); }
 
 :root {
   /* Surfaces */
@@ -430,78 +430,46 @@ footer {
 <body>
 <div class="topbar"></div>
 
-<div class="csv-bar">
-  <a class="csv-btn csv-primary" href="passing_stocks_20260615.csv" download="passing_stocks_20260615.csv">⬇ Download Passing CSV</a>
-  <a class="csv-btn csv-secondary" href="full_results_20260615.csv" download="full_results_20260615.csv">⬇ Full Results CSV</a>
-  <span class="csv-label">Passing Stocks · Scan date: 2026-06-15</span>
-</div>
 <header>
   <div class="hdr-left">
     <div class="brand">
-      <div class="brand-dot" style="background:var(--indigo)"></div>
-      <span class="brand-name">Momentum Alpha · NSE Scanner</span>
+      <div class="brand-dot" style="background:var(--blue)"></div>
+      <span class="brand-name">Momentum Alpha · Volume Action</span>
     </div>
-    <h1>Minervini Trend Template</h1>
-    <p class="hdr-sub">All 8 Minervini conditions passing · NSE India · 15 Jun 2026</p>
+    <h1>Pocket Pivot Stocks</h1>
+    <p class="hdr-sub">Blue volume / pocket pivot events · NSE India · 15 Jun 2026</p>
     <div class="badge-row">
-      <span class="hdr-badge" style="background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo)">✓ All 8 Conditions</span>
-      
+      <span class="hdr-badge" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">✓ Pocket Pivot Volume</span>
+      <span class='hdr-badge' style='background:var(--new-bg);border-color:var(--new-border);color:var(--new-text)'>✦ 1 New Stocks</span>
     </div>
   </div>
-  <div class="date-pill" style="background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo)">15 Jun 2026</div>
+  <div class="date-pill" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">1 Stocks · 15 Jun 2026</div>
 </header>
 
-<div class="kpi-strip" style="--accent:var(--indigo)">
-  <div class="kpi" style="--accent:var(--indigo)">
-    <div class="kpi-lbl">Passing Stocks</div>
-    <div class="kpi-val">2</div>
-    <div class="kpi-hint">all 8 conditions met</div>
-  </div>
-  <div class="kpi" style="--accent:var(--violet)">
-    <div class="kpi-lbl">Above EMA10</div>
-    <div class="kpi-val">1</div>
-    <div class="kpi-hint">close &gt; 10-period ema</div>
-  </div>
-  <div class="kpi" style="--accent:var(--emerald)">
-    <div class="kpi-lbl">Combined Market Cap</div>
-    <div class="kpi-val">₹7,738 Cr</div>
-    <div class="kpi-hint">aggregate market cap</div>
-  </div>
+<div class="kpi-strip">
   <div class="kpi" style="--accent:var(--blue)">
-    <div class="kpi-lbl">Total Traded Value</div>
-    <div class="kpi-val">₹81 Cr</div>
-    <div class="kpi-hint">today's traded volume</div>
+    <div class="kpi-lbl">PPV Stocks</div>
+    <div class="kpi-val">1</div>
+    <div class="kpi-hint">pocket pivot volume</div>
   </div>
-  
+  <div class='kpi' style='--accent:var(--new-text)'><div class='kpi-lbl'>New Appearances</div><div class='kpi-val'>1</div><div class='kpi-hint'>first time in 10 days</div></div>
 </div>
 
 <div class="callout">
-  <strong style="color:var(--indigo)">Minervini Trend Template:</strong>
-  Stocks satisfying all 8 conditions — price above MA150 &amp; MA200, MA150 &gt; MA200,
-  MA200 trending up ≥ 1 month, MA50 above MA150 &amp; MA200, price above MA50,
-  price ≥ 30% above 52-week low, within 25% of 52-week high, and RS percentile ≥ 70.
-  These are momentum candidates in a confirmed Stage 2 uptrend.
+  <strong style="color:var(--blue)">Pocket Pivot Volume (PPV):</strong>
+  Today's volume exceeds the highest <em>down-day</em> volume of the prior 10 sessions while the stock closes in the upper portion of its range —
+  a sign of institutional accumulation in a trending stock.
+  <strong>Bull Snort</strong> signals unusually explosive volume (&gt; 200% relative) alongside a bullish close.
 </div>
 
-<div class="charts-area" style="grid-template-columns:1fr">
-  <div class="chart-card">
-    <div class="chart-lbl">Total Market Cap by Stock (₹ Cr)</div>
-    <div class="chart-wrap">
-      <canvas id="barChart" role="img" aria-label="Market cap bar chart for passing stocks"></canvas>
-    </div>
-  </div>
-</div>
-
-<div class="table-sec">
+<div class="table-sec" style="padding-top:1.1rem">
   <div class="tbl-head">
     <div>
-      <span class="tbl-title">Passing Stocks Detail</span>
-      <span class="tbl-count tbl-title">[2]</span>
+      <span class="tbl-title">Volume Action Stocks</span>
+      <span class="tbl-count tbl-title">[1]</span>
     </div>
     <div class="controls">
       <div class="legend-row">
-        <div class="leg"><div class="leg-dot" style="background:var(--emerald)"></div>Close &gt; EMA10</div>
-        <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Close ≤ EMA10</div>
         <div class="leg"><div class="leg-dot" style="background:var(--new-border)"></div>✦ New (10-day)</div>
       </div>
       <input class="search" id="searchInput" type="text"
@@ -513,54 +481,35 @@ footer {
       <thead><tr>
         <th data-col="sym"    data-type="str">Symbol<i class="si"></i></th>
         <th class="r" data-col="close"  data-type="num">Close ₹<i class="si"></i></th>
-        <th class="r" data-col="ema10"  data-type="num">EMA10 ₹<i class="si"></i></th>
-        <th class="r" data-col="rs"     data-type="num">RS %ile<i class="si"></i></th>
-        <th class="r" data-col="tmc"    data-type="num">Mkt Cap<i class="si"></i></th>
-        <th class="r" data-col="tv"     data-type="num">Traded Val<i class="si"></i></th>
-        <th class="r" data-col="tvpct"  data-type="num">TV % MC<i class="si"></i></th>
-        <th          data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
-        <th          data-col="ind"    data-type="str">Industry<i class="si"></i></th>
+        <th class="r" data-col="relvol" data-type="num">Rel Volume<i class="si"></i></th>
+        <th class="c">Signal</th>
+        <th class="c">Bull Snort</th>
+        <th class="r" data-col="rs"    data-type="num">RS %ile<i class="si"></i></th>
+        <th data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
+        <th data-col="ind"    data-type="str">Industry<i class="si"></i></th>
         <th class="r">Result Date</th>
         <th class="c">Band</th>
       </tr></thead>
       <tbody id="tableBody">
-        <tr class="srow"
-          data-sym="BAJAJCON" data-close="592.4" data-rs="100.0"
-          data-ema10="573.03" data-tmc="7737.83"
-          data-tv="80.83" data-tvpct="1.0446"
-          data-indgrp="Personal Products" data-ind="Personal Care">
+        <tr class="srow is-new"
+          data-sym="ANGELONE" data-indgrp="Capital Markets" data-ind="Stockbroking & Allied"
+          data-close="352.3" data-relvol="145.83" data-rs="33.33">
           <td>
-            <a class="sym-tag" style="background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo)"
-               href="https://www.tradingview.com/chart/?symbol=NSE%3ABAJAJCON" target="_blank" rel="noopener">BAJAJCON</a>
+            <a class="sym-tag" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)"
+               href="https://www.tradingview.com/chart/?symbol=NSE%3AANGELONE" target="_blank" rel="noopener">ANGELONE <span class="sym-new-star">✦ NEW</span></a>
           </td>
-          <td class="r" style="font-family:var(--mono)">₹592.40</td>
-          <td class="r"><span class="pill pill-green">₹573.03</span></td>
-          <td class="r"><span class="pill pill-amber">100.0</span></td>
-          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">₹7,738 Cr</td>
-          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">₹81 Cr</td>
-          <td class="r" style="font-family:var(--mono);color:var(--subtle);font-size:.73rem">1.0446%</td>
-          <td style="color:var(--muted);font-size:.78rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">Personal Products</td>
-          <td style="color:var(--subtle);font-size:.74rem;max-width:130px;overflow:hidden;text-overflow:ellipsis">Personal Care</td>
-          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">—</td>
-          <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">—</td>
-        </tr>
-        <tr class="srow"
-          data-sym="NIFTYSMLCAP250" data-close="null" data-rs="null"
-          data-ema10="null" data-tmc="null"
-          data-tv="null" data-tvpct="null"
-          data-indgrp="Index" data-ind="Index">
-          <td>
-            <a class="sym-tag" style="background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo)"
-               href="https://www.tradingview.com/chart/?symbol=NSE%3ANIFTYSMLCAP250" target="_blank" rel="noopener">NIFTYSMLCAP250</a>
+          <td class="r" style="font-family:var(--mono)">₹352.30</td>
+          <td class="r">
+            <div class="vol-wrap">
+              <div class="vol-bg"><div class="vol-fill" style="width:29.2%;background:var(--amber)"></div></div>
+              <span class="vol-pct" style="color:var(--amber)">145.8%</span>
+            </div>
           </td>
-          <td class="r" style="font-family:var(--mono)">N/A</td>
-          <td class="r"><span class="pill pill-red">N/A</span></td>
-          <td class="r"><span class="pill pill-amber">N/A</span></td>
-          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">N/A</td>
-          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">N/A</td>
-          <td class="r" style="font-family:var(--mono);color:var(--subtle);font-size:.73rem">N/A</td>
-          <td style="color:var(--muted);font-size:.78rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">Index</td>
-          <td style="color:var(--subtle);font-size:.74rem;max-width:130px;overflow:hidden;text-overflow:ellipsis">Index</td>
+          <td class="c"><span class="pill pill-blue" style="font-size:.65rem;letter-spacing:.04em">BLUE PPV</span></td>
+          <td class="c"><span style="color:var(--subtle);font-size:.74rem">—</span></td>
+          <td class="r"><span class="pill pill-amber">33.3</span></td>
+          <td style="color:var(--muted);font-size:.78rem">Capital Markets</td>
+          <td style="color:var(--subtle);font-size:.74rem">Stockbroking & Allied</td>
           <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">—</td>
           <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">—</td>
         </tr></tbody>
@@ -571,38 +520,6 @@ footer {
 <footer>Data: NSE India &amp; Yahoo Finance · Generated 15 Jun 2026 · For informational purposes only · Not financial advice</footer>
 
 <script>
-const labels    = ["BAJAJCON","NIFTYSMLCAP250"];
-const totalData = [7737.83,null];
-
-Chart.defaults.font.family = "'Outfit', sans-serif";
-Chart.defaults.font.size   = 11;
-Chart.defaults.color       = "#5a6282";
-
-new Chart(document.getElementById('barChart'), {
-  type: 'bar',
-  data: { labels, datasets: [{
-    label: 'Mkt Cap (₹ Cr)', data: totalData,
-    backgroundColor: 'rgba(79,70,229,0.12)',
-    borderColor:     'rgba(79,70,229,0.45)',
-    borderWidth: 1, borderRadius: 3,
-  }]},
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#fff', borderColor: '#e2e6f0', borderWidth: 1,
-        titleColor: '#0f1629', bodyColor: '#5a6282', padding: 10,
-        callbacks: { label: c => ` ₹${(c.parsed.y||0).toLocaleString('en-IN')} Cr` },
-      },
-    },
-    scales: {
-      x: { ticks: { color: '#8b93b5', maxTicksLimit: 30 }, grid: { color: '#f1f3f9' } },
-      y: { ticks: { color: '#8b93b5', callback: v => '₹' + Number(v).toLocaleString('en-IN') },
-            grid: { color: '#f1f3f9' } },
-    },
-  },
-});
 
 function filterRows() {
   const q = document.getElementById('searchInput').value.toLowerCase();

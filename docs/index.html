@@ -88,6 +88,35 @@
   footer{text-align:center;padding:1.5rem;font-family:var(--mono);font-size:.68rem;
           color:var(--subtle);border-top:1px solid var(--border);
           background:var(--surface);letter-spacing:.04em;margin-top:3rem;}
+  .header-nav{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    margin-top:18px;
+}
+
+.nav-btn{
+    text-decoration:none;
+    padding:10px 18px;
+    border-radius:10px;
+    font-weight:600;
+    font-size:.85rem;
+    background:white;
+    color:var(--text);
+    border:1px solid var(--border);
+    transition:.2s;
+}
+
+.nav-btn:hover{
+    transform:translateY(-1px);
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+}
+
+.nav-btn.portfolio{
+    background:var(--indigo);
+    color:white;
+    border-color:var(--indigo);
+}
 
   /* ── Market Sentiment ── */
   .sentiment-section{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}
@@ -120,9 +149,23 @@
 <body>
 <div class="topbar"></div>
 <header>
-  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
+  <div class="brand-name-idx">
+      <div class="brand-dot"></div>
+      Momentum Alpha
+  </div>
   <h1>NSE Trend Scanner</h1>
-  <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
+  <p>
+      Daily Minervini trend-template scans ·
+      Free-float & liquidity data · NSE India
+  </p>
+  <div class="header-nav">
+      <a href="index.html" class="nav-btn">
+          📊 Scanner
+      </a>
+      <a href="portfolio.html" class="nav-btn portfolio">
+          💼 Portfolio Tracker
+      </a>
+  </div>
 </header>
 
 

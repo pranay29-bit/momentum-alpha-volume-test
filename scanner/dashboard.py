@@ -1441,6 +1441,18 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
       Open Dashboard →
     </a>
   </div>
+    <div class="card" style="--c:#7c3aed">
+    <div class="card-icon">💼</div>
+    <h2>Portfolio Tracker</h2>
+    <p>
+      Position sizing, risk management,
+      R-multiple tracking and portfolio heat monitoring.
+    </p>
+    <a href="portfolio.html"
+       style="background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed">
+      Open Tracker →
+    </a>
+  </div>
 </div>
 </body></html>"""
 

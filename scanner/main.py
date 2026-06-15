@@ -456,6 +456,21 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 
 {sentiment_html}
 
+<div style="max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;">
+  <a href="portfolio.html"
+     class="btn-link"
+     style="
+       background:#f5f3ff;
+       border-color:#ddd6fe;
+       color:#7c3aed;
+       font-size:.8rem;
+       padding:.5rem 1rem;
+     ">
+     💼 Portfolio Tracker
+  </a>
+</div>
+
+
 <div class="container">
   <h2 class="section-title">Scan History</h2>
   {month_groups_html}

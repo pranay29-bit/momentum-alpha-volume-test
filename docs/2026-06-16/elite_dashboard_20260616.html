@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Momentum Alpha — Elite Stocks — 16 Jun 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root { --ACCENT1:var(--emerald); --ACCENT2:var(--blue); }
+
+:root {
+  /* Surfaces */
+  --bg:         #f7f8fc;
+  --surface:    #ffffff;
+  --surface2:   #f1f3f9;
+  --surface3:   #e8ebf5;
+  --border:     #e2e6f0;
+  --border2:    #ccd1e4;
+
+  /* Text */
+  --text:       #0f1629;
+  --muted:      #5a6282;
+  --subtle:     #8b93b5;
+
+  /* Brand accents */
+  --indigo:     #4f46e5;
+  --indigo-lt:  #eef0fd;
+  --indigo-mid: #c7d2fe;
+  --emerald:    #059669;
+  --emerald-lt: #ecfdf5;
+  --emerald-mid:#a7f3d0;
+  --blue:       #2563eb;
+  --blue-lt:    #eff6ff;
+  --blue-mid:   #bfdbfe;
+  --amber:      #d97706;
+  --amber-lt:   #fffbeb;
+  --amber-mid:  #fde68a;
+  --red:        #dc2626;
+  --red-lt:     #fef2f2;
+  --violet:     #7c3aed;
+  --violet-lt:  #f5f3ff;
+  --violet-mid: #ddd6fe;
+
+  /* NEW badge */
+  --new-bg:     #fdf4ff;
+  --new-border: #d946ef;
+  --new-text:   #a21caf;
+  --new-row:    #fdf4ff;
+
+  /* Type */
+  --sans:  'Outfit', system-ui, sans-serif;
+  --mono:  'DM Mono', 'Courier New', monospace;
+
+  /* Radii */
+  --r:   8px;
+  --rl:  12px;
+  --rxl: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── Topbar ── */
+.topbar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--ACCENT1) 0%, var(--ACCENT2) 100%);
+}
+
+/* ── Header ── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1.6rem 2.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.hdr-left { display: flex; flex-direction: column; gap: .2rem; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .25rem;
+}
+.brand-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.brand-name {
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+header h1 {
+  font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+  color: var(--text);
+}
+.hdr-sub {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-top: .15rem;
+}
+.badge-row { display: flex; gap: .45rem; margin-top: .5rem; flex-wrap: wrap; }
+.hdr-badge {
+  font-size: .64rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: .22rem .75rem;
+  border: 1px solid;
+}
+.date-pill {
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 500;
+  padding: .4rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+  letter-spacing: .04em;
+  align-self: flex-start;
+  margin-top: .25rem;
+}
+
+/* ── CSV bar ── */
+.csv-bar {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem 2.5rem;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.csv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: .35rem .95rem;
+  font-family: var(--mono);
+  font-size: .7rem;
+  font-weight: 500;
+  border-radius: var(--r);
+  border: 1px solid;
+  cursor: pointer;
+  transition: background .14s;
+  letter-spacing: .03em;
+}
+.csv-primary {
+  background: var(--emerald-lt);
+  border-color: var(--emerald-mid);
+  color: var(--emerald);
+}
+.csv-primary:hover { background: #d1fae5; }
+.csv-secondary {
+  background: var(--blue-lt);
+  border-color: var(--blue-mid);
+  color: var(--blue);
+}
+.csv-secondary:hover { background: #dbeafe; }
+.csv-label {
+  font-family: var(--mono);
+  font-size: .67rem;
+  color: var(--subtle);
+  margin-left: auto;
+}
+
+/* ── KPI strip ── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+.kpi {
+  background: var(--surface);
+  padding: 1.1rem 1.6rem;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+.kpi:last-child { border-right: none; }
+.kpi::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--accent);
+}
+.kpi-lbl {
+  font-size: .62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .11em;
+  color: var(--muted);
+  margin-bottom: .35rem;
+}
+.kpi-val {
+  font-size: clamp(1.1rem, 2vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1;
+  color: var(--accent);
+}
+.kpi-hint {
+  font-size: .67rem;
+  color: var(--subtle);
+  margin-top: .25rem;
+}
+
+/* ── Charts area ── */
+.charts-area {
+  padding: 1.1rem 2.5rem;
+  display: grid;
+  gap: .85rem;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 1.1rem 1.3rem .9rem;
+}
+.chart-lbl {
+  font-size: .62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .11em;
+  color: var(--muted);
+  margin-bottom: .8rem;
+}
+.chart-wrap { position: relative; height: 220px; }
+
+/* ── Table section ── */
+.table-sec { padding: 0 2.5rem 3rem; }
+.tbl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .9rem 0 .7rem;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.tbl-title {
+  font-size: .62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+.tbl-count { color: var(--ACCENT1); margin-left: .4rem; }
+.controls { display: flex; align-items: center; gap: .85rem; flex-wrap: wrap; }
+.search {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: .82rem;
+  padding: .38rem .9rem;
+  outline: none;
+  width: 210px;
+  transition: border-color .16s, box-shadow .16s;
+}
+.search::placeholder { color: var(--subtle); }
+.search:focus {
+  border-color: var(--ACCENT1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ACCENT1) 12%, transparent);
+}
+.legend-row { display: flex; gap: .9rem; align-items: center; flex-wrap: wrap; }
+.leg { display: flex; align-items: center; gap: .3rem; font-size: .68rem; color: var(--muted); }
+.leg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Table ── */
+.tbl-outer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; font-size: .82rem; white-space: nowrap; }
+thead tr {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 2;
+}
+th {
+  font-size: .62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+  padding: .68rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s;
+  white-space: nowrap;
+}
+th:hover { background: var(--surface3); }
+th.r { text-align: right; } th.c { text-align: center; }
+th .si { margin-left: .25rem; opacity: .3; font-style: normal; font-size: .65rem; }
+th.sort-asc  .si::after { content: '▲'; opacity: 1; color: var(--ACCENT1); }
+th.sort-desc .si::after { content: '▼'; opacity: 1; color: var(--ACCENT1); }
+th:not(.sort-asc):not(.sort-desc) .si::after { content: '⇅'; }
+.srow { border-bottom: 1px solid var(--border); transition: background .1s; }
+.srow:last-child { border-bottom: none; }
+.srow:hover { background: var(--bg); }
+td { padding: .65rem 1rem; vertical-align: middle; }
+td.r { text-align: right; } td.c { text-align: center; }
+
+/* ── NEW-stock highlight row ── */
+.srow.is-new { background: var(--new-row); }
+.srow.is-new:hover { background: #fae8ff; }
+
+/* ── Symbol tags ── */
+.sym-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: .72rem;
+  padding: .2rem .6rem;
+  border-radius: 6px;
+  letter-spacing: .05em;
+  border: 1px solid;
+  transition: filter .12s;
+}
+.sym-tag:hover { filter: brightness(.93); }
+.sym-new-star {
+  font-size: .55rem;
+  background: var(--new-bg);
+  border: 1px solid var(--new-border);
+  color: var(--new-text);
+  border-radius: 999px;
+  padding: .1rem .38rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+/* ── Value pills ── */
+.pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: .71rem;
+  font-weight: 500;
+  padding: .18rem .55rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.pill-green  { background: var(--emerald-lt); border-color: var(--emerald-mid); color: var(--emerald); }
+.pill-red    { background: var(--red-lt);     border-color: #fca5a5;            color: var(--red); }
+.pill-amber  { background: var(--amber-lt);   border-color: var(--amber-mid);   color: var(--amber); }
+.pill-indigo { background: var(--indigo-lt);  border-color: var(--indigo-mid);  color: var(--indigo); }
+.pill-blue   { background: var(--blue-lt);    border-color: var(--blue-mid);    color: var(--blue); }
+.pill-muted  { background: var(--surface2);   border-color: var(--border2);     color: var(--muted); }
+.pill-violet { background: var(--violet-lt);  border-color: var(--violet-mid);  color: var(--violet); }
+
+/* ── Volume bar ── */
+.vol-wrap { display: flex; align-items: center; gap: .5rem; min-width: 130px; }
+.vol-bg   { flex: 1; height: 4px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+.vol-fill { height: 100%; border-radius: 99px; }
+.vol-pct  { font-family: var(--mono); font-size: .7rem; font-weight: 600; min-width: 42px; text-align: right; }
+
+/* ── IB badge ── */
+.ib-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: .58rem;
+  font-weight: 600;
+  background: var(--amber-lt);
+  border: 1px solid var(--amber-mid);
+  color: var(--amber);
+  padding: .1rem .4rem;
+  border-radius: 4px;
+  margin-left: .3rem;
+  letter-spacing: .04em;
+  vertical-align: middle;
+}
+
+/* ── No-data row ── */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+/* ── Info callout ── */
+.callout {
+  padding: .6rem 2.5rem;
+  font-size: .78rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: .68rem;
+  color: var(--subtle);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--mono);
+  letter-spacing: .04em;
+}
+
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+
+<div class="csv-bar">
+  <a class="csv-btn csv-primary" href="passing_ema10_20260616.csv" download="passing_ema10_20260616.csv">⬇ Download Elite CSV</a>
+  <span class="csv-label">Elite Stocks (Close &gt; EMA10) · Scan date: 2026-06-16</span>
+</div>
+<header>
+  <div class="hdr-left">
+    <div class="brand">
+      <div class="brand-dot" style="background:var(--emerald)"></div>
+      <span class="brand-name">Momentum Alpha · Elite Filter</span>
+    </div>
+    <h1>Passing Stocks Above EMA10</h1>
+    <p class="hdr-sub">All 8 Minervini conditions + Close &gt; 10-period EMA · NSE India · 16 Jun 2026</p>
+    <div class="badge-row">
+      <span class="hdr-badge" style="background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald)">✓ 8 Minervini Conditions</span>
+      <span class="hdr-badge" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">✓ Close &gt; EMA10</span>
+      
+    </div>
+  </div>
+  <div class="date-pill" style="background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald)">16 Jun 2026</div>
+</header>
+
+<div class="kpi-strip">
+  <div class="kpi" style="--accent:var(--emerald)">
+    <div class="kpi-lbl">Elite Stocks</div>
+    <div class="kpi-val">1</div>
+    <div class="kpi-hint">all filters passing</div>
+  </div>
+  <div class="kpi" style="--accent:var(--blue)">
+    <div class="kpi-lbl">Combined Market Cap</div>
+    <div class="kpi-val">₹7,843 Cr</div>
+    <div class="kpi-hint">aggregate market cap</div>
+  </div>
+  <div class="kpi" style="--accent:var(--indigo)">
+    <div class="kpi-lbl">Total Traded Value</div>
+    <div class="kpi-val">₹82 Cr</div>
+    <div class="kpi-hint">today's traded volume</div>
+  </div>
+  
+</div>
+
+<div class="callout">
+  <strong style="color:var(--emerald)">Elite Filter:</strong>
+  All 8 Minervini conditions met <strong>AND</strong> the latest close is above the 10-period EMA —
+  indicating the stock is in an active, accelerating uptrend. These are the highest-conviction
+  actionable buy candidates from today's scan.
+</div>
+
+<div class="charts-area" style="grid-template-columns:1fr 1fr 1fr">
+  <div class="chart-card">
+    <div class="chart-lbl">Elite Stock Count — Daily</div>
+    <div class="chart-wrap"><canvas id="countChart" role="img" aria-label="Elite stock count over time"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-lbl">Combined Market Cap (₹ Cr) — Daily</div>
+    <div class="chart-wrap"><canvas id="mcChart" role="img" aria-label="Combined market cap over time"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-lbl">Total Traded Value (₹ Cr) — Daily</div>
+    <div class="chart-wrap"><canvas id="tvChart" role="img" aria-label="Total traded value over time"></canvas></div>
+  </div>
+</div>
+
+<div class="table-sec">
+  <div class="tbl-head">
+    <div>
+      <span class="tbl-title">Elite Stocks Detail</span>
+      <span class="tbl-count tbl-title">[1]</span>
+    </div>
+    <div class="controls">
+      <div class="legend-row">
+        <div class="leg"><div class="leg-dot" style="background:var(--new-border)"></div>✦ New (10-day)</div>
+      </div>
+      <input class="search" id="searchInput" type="text"
+             placeholder="Search symbol / industry…" oninput="filterRows()"/>
+    </div>
+  </div>
+  <div class="tbl-outer">
+    <table id="mainTable">
+      <thead><tr>
+        <th data-col="sym"   data-type="str">Symbol<i class="si"></i></th>
+        <th class="r" data-col="close"  data-type="num">Close ₹<i class="si"></i></th>
+        <th class="r" data-col="ema10"  data-type="num">EMA10 ₹<i class="si"></i></th>
+        <th class="r" data-col="gap"    data-type="num">Gap % Above EMA10<i class="si"></i></th>
+        <th class="r" data-col="rs"     data-type="num">RS %ile<i class="si"></i></th>
+        <th class="r" data-col="tmc"    data-type="num">Mkt Cap<i class="si"></i></th>
+        <th class="r" data-col="tv"     data-type="num">Traded Val<i class="si"></i></th>
+        <th class="r" data-col="tvpct"  data-type="num">TV % MC<i class="si"></i></th>
+        <th          data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
+        <th          data-col="ind"    data-type="str">Industry<i class="si"></i></th>
+        <th class="r">Result Date</th>
+        <th class="c">Band</th>
+      </tr></thead>
+      <tbody id="tableBody">
+        <tr class="srow"
+          data-sym="BAJAJCON" data-close="600.45" data-ema10="578.01"
+          data-gap="3.8816" data-rs="100.0" data-tmc="7842.98"
+          data-tv="82.4" data-tvpct="1.0506"
+          data-indgrp="Personal Products" data-ind="Personal Care">
+          <td>
+            <a class="sym-tag" style="background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald)"
+               href="https://www.tradingview.com/chart/?symbol=NSE%3ABAJAJCON" target="_blank" rel="noopener">BAJAJCON</a>
+          </td>
+          <td class="r" style="font-family:var(--mono)">₹600.45</td>
+          <td class="r"><span class="pill pill-green">₹578.01</span></td>
+          <td class="r" style="font-family:var(--mono);font-weight:600;color:var(--emerald)">+3.88%</td>
+          <td class="r"><span class="pill pill-amber">100.0</span></td>
+          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">₹7,843 Cr</td>
+          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.77rem">₹82 Cr</td>
+          <td class="r" style="font-family:var(--mono);color:var(--subtle);font-size:.73rem">1.0506%</td>
+          <td style="color:var(--muted);font-size:.78rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">Personal Products</td>
+          <td style="color:var(--subtle);font-size:.74rem;max-width:130px;overflow:hidden;text-overflow:ellipsis">Personal Care</td>
+          <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">—</td>
+          <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">—</td>
+        </tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>Data: NSE India &amp; Yahoo Finance · Generated 16 Jun 2026 · For informational purposes only · Not financial advice</footer>
+
+<script>
+const histLabels = ["25 May","26 May","27 May","28 May","29 May","01 Jun","02 Jun","03 Jun","04 Jun","05 Jun","08 Jun","09 Jun","10 Jun","11 Jun","12 Jun","15 Jun","16 Jun"];
+const histCount  = [153,158,159,153,133,140,1,1,1,0,1,1,0,1,1,1,1];
+const histMC     = [5908236.4,6189366.51,0.0,0.0,0.0,5004159.42,7466.8,7254.54,7298.95,0.0,7515.12,7604.6,0.0,7396.26,7728.03,7737.83,7842.98];
+const histTV     = [22483.95,23525.73,0.0,0.0,0.0,20383.9,76.04,73.31,73.75,0.0,75.64,78.52,0.0,76.87,80.71,80.83,82.4];
+
+Chart.defaults.font.family = "'Outfit', sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = "#5a6282";
+
+const lineDs = (data, color) => ({
+  data,
+  borderColor: color,
+  backgroundColor: color.replace('rgb','rgba').replace(')',',0.07)'),
+  borderWidth: 2, pointRadius: 3.5, pointBackgroundColor: color, fill: true, tension: 0.35,
+});
+const lineOpts = (yFmt, tipFmt) => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#fff', borderColor: '#e2e6f0', borderWidth: 1,
+      titleColor: '#0f1629', bodyColor: '#5a6282', padding: 10,
+      callbacks: { label: tipFmt },
+    },
+  },
+  scales: {
+    x: { ticks: { color: '#8b93b5', maxTicksLimit: 10 }, grid: { color: '#f1f3f9' } },
+    y: { ticks: { color: '#8b93b5', callback: yFmt }, grid: { color: '#f1f3f9' } },
+  },
+});
+new Chart(document.getElementById('countChart'), {
+  type: 'line',
+  data: { labels: histLabels, datasets: [lineDs(histCount, 'rgb(5,150,105)')] },
+  options: lineOpts(v => v, c => ` ${c.parsed.y} stocks`),
+});
+new Chart(document.getElementById('mcChart'), {
+  type: 'line',
+  data: { labels: histLabels, datasets: [lineDs(histMC, 'rgb(37,99,235)')] },
+  options: lineOpts(v => '₹'+Number(v).toLocaleString('en-IN'), c => ` ₹${(c.parsed.y||0).toLocaleString('en-IN')} Cr`),
+});
+new Chart(document.getElementById('tvChart'), {
+  type: 'line',
+  data: { labels: histLabels, datasets: [lineDs(histTV, 'rgb(79,70,229)')] },
+  options: lineOpts(v => '₹'+Number(v).toLocaleString('en-IN'), c => ` ₹${(c.parsed.y||0).toLocaleString('en-IN')} Cr`),
+});
+
+function filterRows() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#tableBody .srow').forEach(r => {
+    const sym    = (r.dataset.sym    || '').toLowerCase();
+    const indgrp = (r.dataset.indgrp || '').toLowerCase();
+    const ind    = (r.dataset.ind    || '').toLowerCase();
+    r.style.display = (sym.includes(q)||indgrp.includes(q)||ind.includes(q)) ? '' : 'none';
+  });
+}
+
+
+let sortCol = null, sortAsc = true;
+document.querySelectorAll('#mainTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col  = th.dataset.col;
+    const type = th.dataset.type;
+    if (!col) return;
+    sortAsc = (sortCol === col) ? !sortAsc : true;
+    sortCol = col;
+    document.querySelectorAll('#mainTable thead th')
+      .forEach(h => h.classList.remove('sort-asc','sort-desc'));
+    th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+    const tbody = document.getElementById('tableBody');
+    Array.from(tbody.querySelectorAll('.srow'))
+      .sort((a, b) => {
+        let av = a.dataset[col], bv = b.dataset[col];
+        if (type === 'num') {
+          av = parseFloat(av); bv = parseFloat(bv);
+          if (isNaN(av)) av = -Infinity;
+          if (isNaN(bv)) bv = -Infinity;
+          return sortAsc ? av - bv : bv - av;
+        }
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      })
+      .forEach(r => tbody.appendChild(r));
+  });
+});
+
+</script>
+</body></html>

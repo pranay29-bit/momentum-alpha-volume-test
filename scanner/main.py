@@ -353,6 +353,10 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
   .topbar{{height:3px;background:linear-gradient(90deg,#4f46e5,#059669);}}
   header{{background:var(--surface);border-bottom:1px solid var(--border);
           padding:2rem 3rem 1.6rem;text-align:center;}}
+  .header-row{{display:flex;align-items:center;justify-content:space-between;
+              gap:1.5rem;flex-wrap:wrap;text-align:left;}}
+  .header-titles{{flex:1;min-width:200px;text-align:center;}}
+  .top-buttons{{display:flex;gap:.65rem;flex-wrap:wrap;}}
   .brand-name-idx{{font-family:var(--mono);font-size:.65rem;font-weight:500;
                    letter-spacing:.14em;text-transform:uppercase;color:var(--emerald);
                    display:flex;align-items:center;justify-content:center;gap:.4rem;margin-bottom:.4rem;}}
@@ -454,6 +458,10 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
   /* ── Mobile responsiveness ── */
   @media (max-width: 768px){{
     header{{padding:1.4rem 1.2rem 1.2rem;}}
+    .header-row{{flex-direction:column;align-items:stretch;}}
+    .header-titles{{text-align:center;}}
+    .top-buttons{{width:100%;}}
+    .top-buttons .btn-link{{flex:1;text-align:center;}}
     .container{{margin:1.4rem auto;padding:0 1rem;}}
     .sentiment-section{{padding:0 1rem;}}
     .sentiment-grid{{grid-template-columns:1fr;}}
@@ -477,8 +485,15 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 <div class="topbar"></div>
 <header>
   <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
-  <h1>NSE Trend Scanner</h1>
-  <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
+  <div class="header-row">
+    <div class="header-titles">
+      <h1>NSE Trend Scanner</h1>
+      <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
+    </div>
+    <div class="top-buttons">
+      <a href="portfolio.html" class="btn-link green">📊 Portfolio Tracker</a>
+    </div>
+  </div>
 </header>
 
 {sentiment_html}

@@ -480,6 +480,49 @@ footer {
   font-family: var(--mono);
   letter-spacing: .04em;
 }
+
+/* ── Horizontal scroll wrapper for tables on small screens ── */
+.tbl-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { min-width: 640px; }
+
+/* ── Mobile responsiveness ── */
+@media (max-width: 768px) {
+  html { font-size: 13px; }
+
+  header {
+    padding: 1.1rem 1.1rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .date-pill { align-self: flex-start; margin-top: .6rem; }
+
+  .csv-bar { padding: .55rem 1.1rem; }
+  .csv-label { margin-left: 0; width: 100%; }
+
+  .charts-area { padding: .9rem 1.1rem; grid-template-columns: 1fr !important; }
+  .chart-wrap { height: 180px; }
+
+  .table-sec { padding: 0 1.1rem 2rem; }
+  .callout { padding: .6rem 1.1rem; }
+
+  .tbl-head { flex-direction: column; align-items: stretch; }
+  .controls { width: 100%; }
+  .search { width: 100%; }
+  .legend-row { width: 100%; }
+
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .kpi { padding: .85rem 1rem; border-bottom: 1px solid var(--border); }
+
+  th, td { padding: .55rem .7rem; }
+}
+
+@media (max-width: 480px) {
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  header h1 { font-size: 1.25rem; }
+  .hdr-sub { font-size: .74rem; }
+  .badge-row { gap: .3rem; }
+  .hdr-badge { font-size: .6rem; padding: .18rem .6rem; }
+}
 """
 
 _TABLE_SORT_JS = """
@@ -1053,7 +1096,9 @@ new Chart(document.getElementById('tvChart'), {{
 # ─────────────────────────────────────────────────────────────────────────────
 #  VOLUME ACTION DASHBOARD
 # ─────────────────────────────────────────────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────────────
+#  VOLUME ACTION DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
 def build_volume_action_dashboard(
     volume_df: pd.DataFrame,
     out_path: Path,
@@ -1062,63 +1107,72 @@ def build_volume_action_dashboard(
 ) -> None:
     date_display = datetime.strptime(date_str, "%Y%m%d").strftime("%d %b %Y")
     known = known_symbols or set()
-    rows = ""
 
-    for _, row in volume_df.sort_values("relative_volume", ascending=False).iterrows():
-        sym        = str(row.get("symbol", "")).replace(".NS", "")
-        is_new     = sym not in known
-        new_cls    = " is-new" if is_new else ""
-        close      = row.get("close", np.nan)
-        rel_vol    = row.get("relative_volume", np.nan)
-        rs         = row.get("rs_percentile", np.nan)
-        ind_grp    = str(row.get("industry_group", "")) or "—"
-        industry   = str(row.get("industry",       "")) or "—"
+    # Ensure bull_snort exists and is boolean, then sort so snort stocks
+    # are grouped together at the top, with relative_volume as the tiebreaker.
+    sorted_df = volume_df.copy()
+    sorted_df["bull_snort"] = sorted_df.get("bull_snort", False).fillna(False).astype(bool)
+    sorted_df = sorted_df.sort_values(
+        ["bull_snort", "relative_volume"], ascending=[False, False]
+    )
+
+    n_total   = len(sorted_df)
+    n_snort   = int(sorted_df["bull_snort"].sum())
+    avg_rv_s  = f"{sorted_df['relative_volume'].dropna().mean():.1f}%" \
+                if "relative_volume" in sorted_df.columns and not sorted_df["relative_volume"].dropna().empty \
+                else "N/A"
+
+    rows_html = ""
+    for _, row in sorted_df.iterrows():
+        sym       = str(row.get("symbol", "")).replace(".NS", "")
+        link      = _tv_link(row.get("symbol", sym))
+        is_new    = sym not in known
+        new_cls   = " is-new" if is_new else ""
+        close     = row.get("close", np.nan)
+        relvol    = row.get("relative_volume", np.nan)
+        rs        = row.get("rs_percentile", np.nan)
+        is_snort  = bool(row.get("bull_snort", False))
+        snort_flag = 1 if is_snort else 0
         result_date = str(row.get("result_date", "—"))
-        price_band  = str(row.get("price_band",  "—"))
-        bull_snort  = row.get("bull_snort", False)
 
-        close_s = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
-        rs_s    = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
+        close_s  = f"₹{float(close):,.2f}" if _safe(close) else "N/A"
+        rs_s     = f"{float(rs):.1f}"       if _safe(rs)    else "N/A"
 
         try:
-            rv = float(rel_vol)
-            bar_pct = min(rv / 500 * 100, 100)
-            rv_s = f"{rv:.1f}%"
-            if rv > 200:   bar_col = "var(--red)"
-            elif rv > 100: bar_col = "var(--amber)"
-            else:          bar_col = "var(--emerald)"
+            rv_f    = float(relvol)
+            rv_s    = f"{rv_f:.1f}%"
+            bar_w   = max(0, min(150, rv_f))  # cap the bar visually at 150%
+            bar_col = "var(--emerald)" if rv_f >= 100 else ("var(--amber)" if rv_f >= 50 else "var(--blue)")
         except Exception:
-            bar_pct = 0; rv_s = "N/A"; bar_col = "var(--muted)"
+            rv_f = -1; rv_s = "N/A"; bar_w = 0; bar_col = "var(--subtle)"
 
-        snort_cell = ('<span class="pill pill-amber" style="font-size:.65rem">🔥 SNORT</span>'
-                      if bull_snort else
-                      '<span style="color:var(--subtle);font-size:.74rem">—</span>')
+        snort_html = (
+            '<span class="pill pill-amber">🔥 Snort</span>' if is_snort
+            else '<span class="pill pill-muted">—</span>'
+        )
 
-        rows += f"""
+        rows_html += f"""
         <tr class="srow{new_cls}"
-          data-sym="{sym}" data-indgrp="{ind_grp}" data-ind="{industry}"
-          data-close="{_r(close)}" data-relvol="{_r(rel_vol)}" data-rs="{_r(rs)}">
+          data-sym="{sym}" data-close="{_r(close)}" data-relvol="{_r(relvol)}"
+          data-snort="{snort_flag}" data-rs="{_r(rs)}" data-result="{result_date}">
           <td>
             <a class="sym-tag" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)"
-               href="{_tv_link(sym)}" target="_blank" rel="noopener">{sym}{_new_star(is_new)}</a>
+               href="{link}" target="_blank" rel="noopener">{sym}{_new_star(is_new)}</a>
           </td>
           <td class="r" style="font-family:var(--mono)">{close_s}</td>
-          <td class="r">
+          <td>
             <div class="vol-wrap">
-              <div class="vol-bg"><div class="vol-fill" style="width:{bar_pct:.1f}%;background:{bar_col}"></div></div>
+              <div class="vol-bg"><div class="vol-fill" style="width:{(bar_w/150)*100}%;background:{bar_col}"></div></div>
               <span class="vol-pct" style="color:{bar_col}">{rv_s}</span>
             </div>
           </td>
-          <td class="c"><span class="pill pill-blue" style="font-size:.65rem;letter-spacing:.04em">BLUE PPV</span></td>
-          <td class="c">{snort_cell}</td>
+          <td class="c"><span class="pill pill-blue">Blue PPV</span></td>
+          <td class="c">{snort_html}</td>
           <td class="r"><span class="pill pill-amber">{rs_s}</span></td>
-          <td style="color:var(--muted);font-size:.78rem">{ind_grp}</td>
-          <td style="color:var(--subtle);font-size:.74rem">{industry}</td>
           <td class="r" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{result_date}</td>
-          <td class="c" style="font-family:var(--mono);color:var(--muted);font-size:.74rem">{price_band}</td>
         </tr>"""
 
-    n_new = sum(1 for _, r in volume_df.iterrows()
+    n_new = sum(1 for _, r in sorted_df.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
 
     html  = _html_head(f"Momentum Alpha — Volume Action — {date_display}",
@@ -1130,44 +1184,55 @@ def build_volume_action_dashboard(
       <div class="brand-dot" style="background:var(--blue)"></div>
       <span class="brand-name">Momentum Alpha · Volume Action</span>
     </div>
-    <h1>Pocket Pivot Stocks</h1>
-    <p class="hdr-sub">Blue volume / pocket pivot events · NSE India · {date_display}</p>
+    <h1>Pocket Pivot / Blue Volume</h1>
+    <p class="hdr-sub">Institutional accumulation signals · NSE India · {date_display}</p>
     <div class="badge-row">
-      <span class="hdr-badge" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">✓ Pocket Pivot Volume</span>
+      <span class="hdr-badge" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">✓ Blue Volume Pivot</span>
       {"<span class='hdr-badge' style='background:var(--new-bg);border-color:var(--new-border);color:var(--new-text)'>✦ " + str(n_new) + " New Stocks</span>" if n_new else ""}
     </div>
   </div>
-  <div class="date-pill" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">{len(volume_df)} Stocks · {date_display}</div>
+  <div class="date-pill" style="background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue)">{date_display}</div>
 </header>
 
 <div class="kpi-strip">
   <div class="kpi" style="--accent:var(--blue)">
-    <div class="kpi-lbl">PPV Stocks</div>
-    <div class="kpi-val">{len(volume_df)}</div>
-    <div class="kpi-hint">pocket pivot volume</div>
+    <div class="kpi-lbl">Volume Signals</div>
+    <div class="kpi-val">{n_total}</div>
+    <div class="kpi-hint">blue volume / pocket pivot</div>
+  </div>
+  <div class="kpi" style="--accent:var(--amber)">
+    <div class="kpi-lbl">Bull Snort</div>
+    <div class="kpi-val">{n_snort}</div>
+    <div class="kpi-hint">snort confirmed signals</div>
+  </div>
+  <div class="kpi" style="--accent:var(--indigo)">
+    <div class="kpi-lbl">Avg Relative Volume</div>
+    <div class="kpi-val">{avg_rv_s}</div>
+    <div class="kpi-hint">vs. average volume</div>
   </div>
   {"<div class='kpi' style='--accent:var(--new-text)'><div class='kpi-lbl'>New Appearances</div><div class='kpi-val'>" + str(n_new) + "</div><div class='kpi-hint'>first time in 10 days</div></div>" if n_new else ""}
 </div>
 
 <div class="callout">
-  <strong style="color:var(--blue)">Pocket Pivot Volume (PPV):</strong>
-  Today's volume exceeds the highest <em>down-day</em> volume of the prior 10 sessions while the stock closes in the upper portion of its range —
-  a sign of institutional accumulation in a trending stock.
-  <strong>Bull Snort</strong> signals unusually explosive volume (&gt; 200% relative) alongside a bullish close.
+  <strong style="color:var(--blue)">Pocket Pivot / Blue Volume:</strong>
+  Up-day volume exceeding the highest down-day volume of the last 10 sessions, signaling
+  institutional accumulation. <strong style="color:var(--amber)">🔥 Bull Snort</strong> stocks are listed first —
+  these show an additional sharp volume/price confirmation on top of the base pivot signal.
 </div>
 
-<div class="table-sec" style="padding-top:1.1rem">
+<div class="table-sec">
   <div class="tbl-head">
     <div>
-      <span class="tbl-title">Volume Action Stocks</span>
-      <span class="tbl-count tbl-title">[{len(volume_df)}]</span>
+      <span class="tbl-title">Volume Action Detail</span>
+      <span class="tbl-count tbl-title">[{n_total}]</span>
     </div>
     <div class="controls">
       <div class="legend-row">
+        <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>🔥 Bull Snort</div>
         <div class="leg"><div class="leg-dot" style="background:var(--new-border)"></div>✦ New (10-day)</div>
       </div>
       <input class="search" id="searchInput" type="text"
-             placeholder="Search symbol / industry…" oninput="filterRows()"/>
+             placeholder="Search symbol…" oninput="filterRows()"/>
     </div>
   </div>
   <div class="tbl-outer">
@@ -1177,14 +1242,11 @@ def build_volume_action_dashboard(
         <th class="r" data-col="close"  data-type="num">Close ₹<i class="si"></i></th>
         <th class="r" data-col="relvol" data-type="num">Rel Volume<i class="si"></i></th>
         <th class="c">Signal</th>
-        <th class="c">Bull Snort</th>
-        <th class="r" data-col="rs"    data-type="num">RS %ile<i class="si"></i></th>
-        <th data-col="indgrp" data-type="str">Industry Group<i class="si"></i></th>
-        <th data-col="ind"    data-type="str">Industry<i class="si"></i></th>
-        <th class="r">Result Date</th>
-        <th class="c">Band</th>
+        <th class="c" data-col="snort"  data-type="num">Bull Snort<i class="si"></i></th>
+        <th class="r" data-col="rs"     data-type="num">RS %ile<i class="si"></i></th>
+        <th class="r" data-col="result" data-type="str">Result Date<i class="si"></i></th>
       </tr></thead>
-      <tbody id="tableBody">{rows}</tbody>
+      <tbody id="tableBody">{rows_html}</tbody>
     </table>
   </div>
 </div>
@@ -1198,8 +1260,7 @@ def build_volume_action_dashboard(
 </body></html>"""
 
     out_path.write_text(html, encoding="utf-8")
-    logger.info("Volume action dashboard → %s", out_path)
-
+    logger.info("Volume action dashboard → %s  (%d stocks, %d snort)", out_path, n_total, n_snort)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ROCKET DASHBOARD
@@ -1402,6 +1463,14 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
 .card a{{display:inline-flex;align-items:center;gap:.35rem;padding:.38rem .95rem;
          font-family:var(--mono);font-size:.72rem;font-weight:500;border-radius:8px;
          border:1px solid;text-decoration:none;transition:background .14s}}
+
+@media (max-width: 600px) {{
+  body{{padding:1.2rem}}
+  .topbar{{margin:-1.2rem -1.2rem 1.4rem}}
+  h1{{font-size:1.35rem}}
+  .grid{{grid-template-columns:1fr;gap:.85rem}}
+  .card{{padding:1.1rem 1.25rem}}
+}}
 </style>
 </head>
 <body>
@@ -1439,18 +1508,6 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
     <p>All 8 conditions + Inside Bar — price coiling for potential breakout.</p>
     <a href="{rocket_path}" style="background:#fffbeb;border-color:#fde68a;color:#d97706">
       Open Dashboard →
-    </a>
-  </div>
-    <div class="card" style="--c:#7c3aed">
-    <div class="card-icon">💼</div>
-    <h2>Portfolio Tracker</h2>
-    <p>
-      Position sizing, risk management,
-      R-multiple tracking and portfolio heat monitoring.
-    </p>
-    <a href="portfolio.html"
-       style="background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed">
-      Open Tracker →
     </a>
   </div>
 </div>

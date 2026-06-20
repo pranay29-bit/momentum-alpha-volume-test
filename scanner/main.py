@@ -290,7 +290,7 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 
             slug         = d.name.replace("-", "")
             passing_link = f"{d.name}/dashboard_{slug}.html"
-            elite_link   = f"{base}/{d.name}/elite_dashboard_{slug}.html"
+            elite_link   = f"{d.name}/elite_dashboard_{slug}.html"
 
             table_rows += f"""
         <tr>
@@ -309,6 +309,7 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
       <span class="month-acc-chevron">&#8963;</span>
     </button>
     <div class="month-body open">
+      <div class="tbl-wrap">
       <table class="history-table">
         <thead>
           <tr>
@@ -321,6 +322,7 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
         </thead>
         <tbody>{table_rows}</tbody>
       </table>
+      </div>
     </div>
   </div>"""
 
@@ -444,6 +446,31 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
   .close-val{{font-family:var(--mono);font-size:.77rem;color:var(--muted);margin-bottom:.7rem;}}
   .close-val strong{{color:var(--text);}}
   .sentiment-legend{{font-family:var(--mono);font-size:.67rem;color:var(--subtle);margin-top:.55rem;}}
+
+  /* ── Horizontal scroll wrapper so history tables don't break mobile layout ── */
+  .tbl-wrap{{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 10px 10px;}}
+  table.history-table{{min-width:560px;}}
+
+  /* ── Mobile responsiveness ── */
+  @media (max-width: 768px){{
+    header{{padding:1.4rem 1.2rem 1.2rem;}}
+    .container{{margin:1.4rem auto;padding:0 1rem;}}
+    .sentiment-section{{padding:0 1rem;}}
+    .sentiment-grid{{grid-template-columns:1fr;}}
+    .month-accordion{{padding:.75rem .9rem;gap:.5rem;font-size:.85rem;}}
+    .month-acc-meta{{display:none;}}
+    .history-table th, .history-table td{{padding:.6rem .75rem;font-size:.78rem;}}
+    .btn-link{{padding:.24rem .65rem;font-size:.66rem;}}
+    h2.section-title{{font-size:.95rem;}}
+  }}
+  @media (max-width: 480px){{
+    html{{font-size:13px;}}
+    header h1{{font-size:1.4rem;}}
+    header p{{font-size:.72rem;}}
+    .sentiment-card{{padding:1rem 1.1rem;}}
+    .ema-row{{gap:.45rem;}}
+    .ema-pill{{font-size:.68rem;padding:.26rem .65rem;}}
+  }}
   </style>
 </head>
 <body>
@@ -455,21 +482,6 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 </header>
 
 {sentiment_html}
-
-<div style="max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;">
-  <a href="portfolio.html"
-     class="btn-link"
-     style="
-       background:#f5f3ff;
-       border-color:#ddd6fe;
-       color:#7c3aed;
-       font-size:.8rem;
-       padding:.5rem 1rem;
-     ">
-     💼 Portfolio Tracker
-  </a>
-</div>
-
 
 <div class="container">
   <h2 class="section-title">Scan History</h2>

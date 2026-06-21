@@ -13,8 +13,12 @@ import {
 const positionsRef = collection(db, "positions");
 const positionsQuery = query(positionsRef, orderBy("createdAt", "desc"));
 
+const CORS_PROXY = "https://corsproxy.io/?url=";
+const LIVE_PRICE_INTERVAL_MS = 15000;
+
 let positions = [];
 let unsubscribe = null;
+let liveTimer = null;
 
 const loginBtn = document.getElementById("loginBtn");
 
@@ -36,10 +40,17 @@ onAuthStateChanged(auth, (user) => {
     unsubscribe();
     unsubscribe = null;
   }
+  if (liveTimer) {
+    clearInterval(liveTimer);
+    liveTimer = null;
+  }
 
   if (user) {
     loginBtn.textContent = `Logout (${user.displayName || user.email})`;
     subscribeToPositions();
+    // Start the live-price loop only while logged in (writes need auth).
+    fetchLivePrices();
+    liveTimer = setInterval(fetchLivePrices, LIVE_PRICE_INTERVAL_MS);
   } else {
     loginBtn.textContent = "Login with Google";
     positions = [];
@@ -51,6 +62,8 @@ function subscribeToPositions() {
   const tbody = document.getElementById("positionsTable");
   tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--subtle)">Loading…</td></tr>`;
 
+  // Live listener: ANY change (yours or anyone else's, including the
+  // auto-fetched price updates below) re-renders this for everyone.
   unsubscribe = onSnapshot(
     positionsQuery,
     (snap) => {
@@ -62,6 +75,40 @@ function subscribeToPositions() {
       tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--subtle)">Could not load positions.</td></tr>`;
     }
   );
+}
+
+// ── Live price fetch (Yahoo Finance via public CORS proxy) ───────────────
+// IMPORTANT: Firestore security rules only allow the OWNER of a position to
+// update it. So each logged-in browser tab only fetches & writes prices for
+// the positions IT owns. Other people's positions update on their own tabs
+// and then sync to you automatically through the onSnapshot listener above.
+// If nobody who owns a given position currently has the page open, that
+// position's price simply won't refresh until its owner is back online —
+// there's no server-side cron here, this is a purely client-driven loop.
+async function fetchLivePrices() {
+  if (!auth.currentUser) return;
+
+  const myPositions = positions.filter((p) => p.ownerUid === auth.currentUser.uid);
+  if (myPositions.length === 0) return;
+
+  for (const pos of myPositions) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${pos.symbol}?interval=1m`;
+      const response = await fetch(CORS_PROXY + encodeURIComponent(url));
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = await response.json();
+      const livePrice = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+
+      if (typeof livePrice === "number" && livePrice > 0 && livePrice !== pos.currentPrice) {
+        await updateDoc(doc(db, "positions", pos.id), { currentPrice: livePrice });
+      }
+    } catch (err) {
+      // Don't let one bad symbol/proxy hiccup break the loop or the UI —
+      // just log it and keep the last known price until the next tick.
+      console.warn(`Live price fetch failed for ${pos.symbol}:`, err.message);
+    }
+  }
 }
 
 function renderAll() {
@@ -108,9 +155,8 @@ function renderRow(p) {
     <td>${p.stop}</td>
     <td>${p.qty}</td>
     <td>
-      ${isOwner
-        ? `<input type="number" class="price-input" value="${currentPrice}" data-id="${p.id}"/>`
-        : currentPrice}
+      ${currentPrice.toFixed(2)}
+      ${isOwner ? `<input type="number" class="price-input" placeholder="override" data-id="${p.id}"/>` : ""}
     </td>
     <td class="${pnlClass(pnlPct)}">${pnlPct.toFixed(2)}%</td>
     <td class="${pnlClass(rMultiple)}">${rMultiple.toFixed(2)}R</td>
@@ -119,6 +165,8 @@ function renderRow(p) {
   tbody.appendChild(tr);
 
   if (isOwner) {
+    // Manual override: lets the owner correct a price if the live fetch
+    // is stale, blocked, or the symbol mapping is wrong.
     const priceInput = tr.querySelector(".price-input");
     priceInput.addEventListener("change", () => updateCurrentPrice(p.id, priceInput.value));
     const delBtn = tr.querySelector(".deleteBtn");
@@ -131,8 +179,6 @@ async function updateCurrentPrice(id, value) {
   if (!(price > 0)) return;
 
   try {
-    // Listener re-renders this row (and the summary cards) for everyone
-    // automatically once this write lands.
     await updateDoc(doc(db, "positions", id), { currentPrice: price });
   } catch (err) {
     console.error(err);
@@ -161,23 +207,17 @@ function updateSummary() {
     return;
   }
 
-  let totalRiskAmount = 0;
   let totalR = 0;
   let winners = 0;
   let losers = 0;
 
   positions.forEach((p) => {
     const { rMultiple } = metrics(p);
-    totalRiskAmount += Number(p.riskAmount ?? p.qty * p.riskPerShare);
     totalR += rMultiple;
     if (rMultiple > 0.001) winners++;
     else if (rMultiple < -0.001) losers++;
   });
 
-  // "Heat" here = sum of original risk amounts as committed capital-at-risk,
-  // shown as a count rather than %, since we don't have each owner's
-  // portfolio size on this shared page. Swap in a real % if you store
-  // portfolio size per user.
   document.getElementById("heat").textContent = positions.length + " open";
   document.getElementById("avgR").textContent = (totalR / positions.length).toFixed(2) + "R";
   document.getElementById("winLoss").textContent = `${winners} / ${losers}`;

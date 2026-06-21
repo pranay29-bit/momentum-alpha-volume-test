@@ -1,28 +1,80 @@
-import { db, auth, login } from "./firebase.js";
+import { db, auth, login, logout, onAuthStateChanged } from "./firebase.js";
 
 import {
   collection,
   addDoc,
-  getDocs,
   deleteDoc,
-  doc
+  doc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
-// Local in-memory cache of the user's positions. We only hit Firestore for a
-// full read once (right after login). After that, every add/delete updates
-// this cache + the DOM directly, instead of re-querying the whole collection
-// on every action — that round trip was what made the page feel slow.
-let positions = [];
-let positionsRef = null;
+// Everyone reads/writes the SAME collection now, instead of a private
+// users/{uid}/positions subcollection. Each doc carries ownerUid/ownerName
+// so we know who added it and who's allowed to delete it.
+const positionsRef = collection(db, "positions");
+const positionsQuery = query(positionsRef, orderBy("createdAt", "desc"));
 
-document.getElementById("loginBtn").onclick = async () => {
-  await login();
-  positionsRef = collection(db, "users", auth.currentUser.uid, "positions");
-  await loadPositions();
+let positions = [];
+let unsubscribe = null;
+
+const loginBtn = document.getElementById("loginBtn");
+const addBtn = document.getElementById("addBtn");
+
+loginBtn.onclick = async () => {
+  if (auth.currentUser) {
+    await logout();
+  } else {
+    try {
+      await login();
+    } catch (err) {
+      console.error(err);
+      alert("Login failed. Please try again.");
+    }
+  }
 };
 
-document.getElementById("addBtn").onclick = addPosition;
+// onAuthStateChanged fires on login, on logout, and on page load if a
+// session already exists — this replaces the old "subscribe only after
+// clicking login" flow and avoids creating duplicate listeners.
+onAuthStateChanged(auth, (user) => {
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
 
+  if (user) {
+    loginBtn.textContent = `Logout (${user.displayName || user.email})`;
+    subscribeToPositions();
+  } else {
+    loginBtn.textContent = "Login with Google";
+    positions = [];
+    renderAll();
+  }
+});
+
+function subscribeToPositions() {
+  const tbody = document.getElementById("positionsTable");
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--subtle)">Loading…</td></tr>`;
+
+  // Live listener: any add/edit/delete by ANY logged-in user pushes an
+  // update here automatically. No polling, no manual refresh needed.
+  unsubscribe = onSnapshot(
+    positionsQuery,
+    (snap) => {
+      positions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderAll();
+    },
+    (err) => {
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--subtle)">Could not load positions.</td></tr>`;
+    }
+  );
+}
+
+addBtn.onclick = addPosition;
 document.getElementById("portfolioSize").addEventListener("input", updateSummary);
 document.getElementById("riskPct").addEventListener("input", updateSummary);
 
@@ -42,8 +94,12 @@ async function addPosition() {
     alert("Enter a symbol");
     return;
   }
-  if (entry <= stop) {
+  if (!(entry > stop)) {
     alert("Entry must be above stop");
+    return;
+  }
+  if (!(portfolio > 0) || !(riskPct > 0)) {
+    alert("Set a valid portfolio size and risk % first");
     return;
   }
 
@@ -51,18 +107,24 @@ async function addPosition() {
   const riskPerShare = entry - stop;
   const qty = Math.floor(riskAmount / riskPerShare);
 
-  const addBtn = document.getElementById("addBtn");
   addBtn.disabled = true;
   addBtn.textContent = "Adding…";
 
   try {
-    const data = { symbol, entry, stop, qty, riskPerShare, createdAt: Date.now() };
-    const ref = await addDoc(positionsRef, data);
-
-    // Optimistic update: append locally instead of re-fetching everything.
-    positions.push({ id: ref.id, ...data });
-    renderRow({ id: ref.id, ...data });
-    updateSummary();
+    const data = {
+      symbol,
+      entry,
+      stop,
+      qty,
+      riskPerShare,
+      ownerUid: auth.currentUser.uid,
+      ownerName: auth.currentUser.displayName || auth.currentUser.email,
+      createdAt: serverTimestamp()
+    };
+    // No optimistic local push needed anymore — the onSnapshot listener
+    // above will receive this write back (including from the server) and
+    // re-render automatically, for us AND everyone else watching.
+    await addDoc(positionsRef, data);
 
     document.getElementById("symbol").value = "";
     document.getElementById("entry").value = "";
@@ -76,18 +138,15 @@ async function addPosition() {
   }
 }
 
-async function loadPositions() {
-  if (!auth.currentUser) return;
-
+function renderAll() {
   const tbody = document.getElementById("positionsTable");
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--subtle)">Loading…</td></tr>`;
-
-  const snap = await getDocs(positionsRef);
-
-  positions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
   tbody.innerHTML = "";
-  positions.forEach(renderRow);
+
+  if (positions.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--subtle)">No open positions</td></tr>`;
+  } else {
+    positions.forEach(renderRow);
+  }
   updateSummary();
 }
 
@@ -95,16 +154,21 @@ function renderRow(p) {
   const tbody = document.getElementById("positionsTable");
   const tr = document.createElement("tr");
   tr.dataset.id = p.id;
+
+  const canDelete = auth.currentUser && p.ownerUid === auth.currentUser.uid;
+
   tr.innerHTML = `
-    <td>${p.symbol}</td>
+    <td>${escapeHtml(p.symbol)} <span style="color:var(--subtle);font-size:0.8em">(${escapeHtml(p.ownerName || "unknown")})</span></td>
     <td>${p.entry}</td>
     <td>${p.stop}</td>
     <td>${p.qty}</td>
-    <td>${p.riskPerShare.toFixed(2)}</td>
-    <td><button data-id="${p.id}" class="deleteBtn">❌</button></td>
+    <td>${Number(p.riskPerShare).toFixed(2)}</td>
+    <td>${canDelete ? `<button data-id="${p.id}" class="deleteBtn">❌</button>` : ""}</td>
   `;
   tbody.appendChild(tr);
-  tr.querySelector(".deleteBtn").onclick = () => deletePosition(p.id, tr);
+
+  const delBtn = tr.querySelector(".deleteBtn");
+  if (delBtn) delBtn.onclick = () => deletePosition(p.id, tr);
 }
 
 async function deletePosition(id, rowEl) {
@@ -113,12 +177,9 @@ async function deletePosition(id, rowEl) {
   rowEl.style.opacity = "0.4";
 
   try {
-    await deleteDoc(doc(db, "users", auth.currentUser.uid, "positions", id));
-
-    // Optimistic update: remove locally instead of re-fetching everything.
-    positions = positions.filter(p => p.id !== id);
-    rowEl.remove();
-    updateSummary();
+    // Firestore security rules (see firestore.rules) double-check that
+    // only the owner can delete — this client check is just for UX.
+    await deleteDoc(doc(db, "positions", id));
   } catch (err) {
     console.error(err);
     rowEl.style.opacity = "1";
@@ -128,7 +189,6 @@ async function deletePosition(id, rowEl) {
 
 function updateSummary() {
   const portfolio = Number(document.getElementById("portfolioSize").value || 0);
-
   const totalRisk = positions.reduce((sum, p) => sum + p.qty * p.riskPerShare, 0);
 
   if (portfolio > 0) {
@@ -139,4 +199,10 @@ function updateSummary() {
     document.getElementById("initialRisk").textContent = "0%";
     document.getElementById("heat").textContent = "0%";
   }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
 }

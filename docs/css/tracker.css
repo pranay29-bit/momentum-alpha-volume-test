@@ -1,0 +1,140 @@
+:root{
+  --bg:#f7f8fc;--surface:#fff;--border:#e2e6f0;--border2:#ccd1e4;
+  --text:#0f1629;--muted:#5a6282;--subtle:#8b93b5;
+  --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
+  --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
+  --blue:#2563eb;--blue-lt:#eff6ff;--blue-mid:#bfdbfe;
+  --amber:#d97706;--amber-lt:#fffbeb;--amber-mid:#fde68a;
+  --red:#dc2626;--red-lt:#fef2f2;
+  --sans:'Outfit',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}
+
+.topbar{height:3px;background:linear-gradient(90deg,#4f46e5,#059669);}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);
+        padding:1.6rem 3rem;}
+.brand-name-idx{font-family:var(--mono);font-size:.65rem;font-weight:500;
+                 letter-spacing:.14em;text-transform:uppercase;color:var(--emerald);
+                 display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem;}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald);}
+.header-row{display:flex;align-items:center;justify-content:space-between;
+            gap:1.5rem;flex-wrap:wrap;text-align:left;}
+.header-titles{flex:1;min-width:200px;text-align:center;}
+.header-titles h1{font-family:var(--sans);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;
+           letter-spacing:-.03em;color:var(--text);margin-bottom:.2rem;}
+.header-titles p{color:var(--muted);font-size:.83rem;font-family:var(--mono);}
+.top-buttons{display:flex;gap:.65rem;flex-wrap:wrap;}
+
+.container{max-width:1120px;margin:2rem auto;padding:0 1.5rem;}
+h2.section-title{font-family:var(--sans);font-size:1rem;font-weight:700;
+                  letter-spacing:-.01em;margin-bottom:.85rem;color:var(--text);}
+
+.panel{margin-bottom:1.75rem;}
+
+/* ── Summary cards ── */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-bottom:1.75rem;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+      padding:1.1rem 1.4rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.card h3{font-family:var(--mono);font-size:.67rem;font-weight:500;letter-spacing:.06em;
+         text-transform:uppercase;color:var(--subtle);margin-bottom:.4rem;}
+.card span{font-family:var(--sans);font-size:1.4rem;font-weight:700;color:var(--text);}
+
+/* ── Forms ── */
+.settings,.add-position{display:flex;gap:.75rem;flex-wrap:wrap;}
+input{font-family:var(--mono);font-size:.85rem;padding:.6rem .9rem;
+      border:1px solid var(--border2);border-radius:8px;background:var(--surface);
+      color:var(--text);outline:none;flex:1;min-width:140px;
+      transition:border-color .14s;}
+input::placeholder{color:var(--subtle);}
+input:focus{border-color:var(--indigo);}
+
+/* ── Buttons (reuses the site's pill-button language) ── */
+.btn-link{display:inline-flex;align-items:center;gap:.4rem;
+          padding:.5rem 1.1rem;border-radius:999px;border:1px solid var(--indigo-mid);
+          background:var(--indigo-lt);color:var(--indigo);
+          font-family:var(--mono);font-size:.78rem;font-weight:500;letter-spacing:.02em;
+          text-decoration:none;cursor:pointer;transition:background .14s;}
+.btn-link:hover{background:#dbeafe;}
+.btn-link.green{background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald);}
+.btn-link.green:hover{background:#d1fae5;}
+.btn-link.blue{background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue);}
+.btn-link.blue:hover{background:#dbeafe;}
+
+/* ── Login ── */
+.login-row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;}
+.login-status{color:var(--subtle);font-size:.78rem;font-family:var(--mono);
+               margin-top:.6rem;letter-spacing:.02em;}
+.btn-link.amber{background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber);}
+.btn-link.amber:hover{background:#fef3c7;}
+.btn-link:disabled{opacity:.6;cursor:default;}
+
+button{font-family:var(--mono);}
+
+/* ── Table (matches the history-table look used elsewhere on the site) ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
+table.history-table{width:100%;min-width:560px;border-collapse:collapse;
+      background:var(--surface);border:1px solid var(--border);border-radius:10px;
+      overflow:hidden;}
+.history-table th{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--muted);padding:.7rem 1.1rem;text-align:left;
+    background:#f1f3f9;border-bottom:1px solid var(--border);}
+.history-table td{padding:.75rem 1.1rem;border-bottom:1px solid var(--border);font-size:.85rem;
+    font-family:var(--mono);}
+.history-table tr:last-child td{border-bottom:none;}
+.history-table tr:hover td{background:var(--bg);}
+
+.deleteBtn{background:var(--red-lt);border:1px solid #fca5a5;color:var(--red);
+           padding:.32rem .7rem;border-radius:8px;cursor:pointer;font-size:.78rem;}
+.deleteBtn:hover{background:#fee2e2;}
+
+footer{text-align:center;padding:1.5rem;font-family:var(--mono);font-size:.68rem;
+        color:var(--subtle);border-top:1px solid var(--border);
+        background:var(--surface);letter-spacing:.04em;margin-top:2rem;}
+
+/* ── Risk type select + live preview ── */
+select{font-family:var(--mono);font-size:.85rem;padding:.6rem .9rem;
+      border:1px solid var(--border2);border-radius:8px;background:var(--surface);
+      color:var(--text);outline:none;min-width:140px;cursor:pointer;}
+select:focus{border-color:var(--indigo);}
+
+.preview-box{background:var(--indigo-lt);border:1px solid var(--indigo-mid);
+             border-radius:10px;padding:1rem 1.25rem;margin-top:1rem;
+             display:flex;gap:2rem;flex-wrap:wrap;}
+.preview-box .stat{display:flex;flex-direction:column;gap:.2rem;}
+.preview-box .stat label{font-family:var(--mono);font-size:.62rem;font-weight:600;
+             text-transform:uppercase;letter-spacing:.08em;color:var(--indigo);}
+.preview-box .stat span{font-family:var(--sans);font-size:1.15rem;font-weight:700;color:var(--text);}
+
+/* ── Nav tabs between Position Size Calculator / Position Tracker ── */
+.nav-tabs{display:flex;gap:.5rem;flex-wrap:wrap;}
+
+/* ── P&L / R-multiple coloring ── */
+.pnl-pos{color:var(--emerald);font-weight:600;}
+.pnl-neg{color:var(--red);font-weight:600;}
+.pnl-flat{color:var(--subtle);}
+
+.price-input{width:90px;min-width:90px;padding:.4rem .6rem;font-size:.8rem;}
+
+@media (max-width: 768px){
+  header{padding:1.2rem 1.1rem;}
+  .header-row{flex-direction:column;align-items:stretch;}
+  .top-buttons{width:100%;}
+  .top-buttons .btn-link{flex:1;justify-content:center;}
+  .container{margin:1.4rem auto;padding:0 1rem;}
+  .summary{grid-template-columns:repeat(2,1fr);}
+  .settings,.add-position{flex-direction:column;}
+  input,select{min-width:100%;}
+  .preview-box{flex-direction:column;gap:.85rem;}
+  .price-input{width:100%;}
+  .history-table th,.history-table td{padding:.6rem .75rem;font-size:.78rem;}
+}
+@media (max-width: 480px){
+  html{font-size:13px;}
+  .header-titles h1{font-size:1.3rem;}
+  .summary{grid-template-columns:1fr 1fr;gap:.75rem;}
+  .card{padding:.9rem 1rem;}
+  .card span{font-size:1.15rem;}
+}

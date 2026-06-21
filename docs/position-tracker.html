@@ -1,86 +1,134 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Position Tracker — Momentum Alpha</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/tracker.css"/>
-<script type="module" src="js/position-tracker.js"></script>
-</head>
-<body>
-<div class="topbar"></div>
+// Array to store your positions dynamically
+let positions = [];
 
-<header>
-  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
-  <div class="header-row">
-    <div class="header-titles">
-      <h1>Position Tracker</h1>
-      <p>Live P&amp;L % and R-multiple on every open position</p>
-    </div>
-    <div class="top-buttons">
-      <div class="nav-tabs">
-        <a href="index.html" class="btn-link">← Scanner</a>
-        <a href="position-size.html" class="btn-link blue">Position Size Calculator →</a>
-      </div>
-      <button id="loginBtn" class="btn-link green">Login with Google</button>
-    </div>
-  </div>
-</header>
+// Configuration
+const UPDATE_INTERVAL_MS = 15000; // Fetch new prices every 15 seconds
+const CORS_PROXY = "https://corsproxy.io/?"; // Free proxy to bypass CORS
 
-<div class="container">
+// --- Core Math Functions ---
 
-  <section class="summary">
-    <div class="card">
-      <h3>Open Positions</h3>
-      <span id="openCount">0</span>
-    </div>
-    <div class="card">
-      <h3>Portfolio Heat</h3>
-      <span id="heat">0%</span>
-    </div>
-    <div class="card">
-      <h3>Avg R</h3>
-      <span id="avgR">0R</span>
-    </div>
-    <div class="card">
-      <h3>Winners / Losers</h3>
-      <span id="winLoss">0 / 0</span>
-    </div>
-  </section>
+function calculatePnL(entry, current) {
+    if (!current) return 0;
+    return (((current - entry) / entry) * 100).toFixed(2);
+}
 
-  <section class="panel">
-    <h2 class="section-title">Open Positions</h2>
-    <p style="font-family:var(--mono);font-size:.75rem;color:var(--subtle);margin-bottom:.75rem">
-      Update "Current Price" on your own positions to refresh P&amp;L % and R live for everyone.
-    </p>
-    <div class="tbl-wrap">
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Owner</th>
-            <th>Entry</th>
-            <th>SL</th>
-            <th>Qty</th>
-            <th>Current Price</th>
-            <th>P&amp;L %</th>
-            <th>R Multiple</th>
-            <th>Delete</th>
-          </tr>
-        </thead>
-        <tbody id="positionsTable"></tbody>
-      </table>
-    </div>
-  </section>
+function calculateRMultiple(entry, sl, current) {
+    if (!current) return 0;
+    const risk = entry - sl;
+    if (risk <= 0) return 0; // Prevent division by zero
+    const reward = current - entry;
+    return (reward / risk).toFixed(2);
+}
 
-</div>
+// --- Fetch Live Prices ---
 
-<footer>
-  Data sourced from NSE India &amp; Yahoo Finance &nbsp;·&nbsp;
-  Updated daily at 18:00 IST &nbsp;·&nbsp;
-  For informational purposes only — not financial advice
-</footer>
+async function fetchLivePrices() {
+    if (positions.length === 0) return; // Skip fetching if there are no positions
 
-</body>
-</html>
+    for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
+        
+        try {
+            // Yahoo Finance API endpoint for current pricing
+            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${pos.symbol}?interval=1m`;
+            const response = await fetch(CORS_PROXY + encodeURIComponent(url));
+            const data = await response.json();
+            
+            // Extract the current market price
+            const livePrice = data.chart.result[0].meta.regularMarketPrice;
+            
+            if (livePrice) {
+                positions[i].currentPrice = livePrice;
+            }
+        } catch (error) {
+            console.error(`Failed to fetch price for ${pos.symbol}:`, error);
+        }
+    }
+    
+    // Re-render table and summary after all prices are updated
+    renderTable();
+    updateSummary();
+}
+
+// --- Rendering Functions ---
+
+function renderTable() {
+    const tbody = document.getElementById("positionsTable");
+    tbody.innerHTML = "";
+
+    if (positions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--subtle);">No open positions found.</td></tr>`;
+        return;
+    }
+
+    positions.forEach(pos => {
+        // Fallback to entry price if currentPrice hasn't loaded yet
+        const currentP = pos.currentPrice || pos.entry; 
+        
+        const pnl = calculatePnL(pos.entry, currentP);
+        const rMult = calculateRMultiple(pos.entry, pos.sl, currentP);
+        
+        // Color coding based on profitability
+        const pnlColor = pnl >= 0 ? "color: #00c853;" : "color: #ff3d00;";
+        const rColor = rMult >= 0 ? "color: #00c853;" : "color: #ff3d00;";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td style="font-weight: 600;">${pos.symbol}</td>
+            <td>${pos.owner}</td>
+            <td>₹${parseFloat(pos.entry).toFixed(2)}</td>
+            <td>₹${parseFloat(pos.sl).toFixed(2)}</td>
+            <td>${pos.qty}</td>
+            <td class="live-price pulse">₹${parseFloat(currentP).toFixed(2)}</td>
+            <td style="${pnlColor}">${pnl}%</td>
+            <td style="${rColor}">${rMult}R</td>
+            <td><button class="delete-btn" onclick="deletePosition(${pos.id})">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function updateSummary() {
+    const openCount = positions.length;
+    let totalR = 0;
+    let winners = 0;
+    let losers = 0;
+
+    positions.forEach(pos => {
+        const currentP = pos.currentPrice || pos.entry;
+        const rMult = parseFloat(calculateRMultiple(pos.entry, pos.sl, currentP));
+        totalR += rMult;
+        
+        if (rMult > 0) winners++;
+        else if (rMult < 0) losers++;
+    });
+
+    const avgR = openCount > 0 ? (totalR / openCount).toFixed(2) : 0;
+
+    document.getElementById("openCount").innerText = openCount;
+    document.getElementById("avgR").innerText = `${avgR}R`;
+    document.getElementById("winLoss").innerText = `${winners} / ${losers}`;
+    
+    // Heat calculation 
+    document.getElementById("heat").innerText = openCount > 0 ? "Active" : "Neutral";
+}
+
+// --- Actions ---
+
+window.deletePosition = function(id) {
+    positions = positions.filter(p => p.id !== id);
+    renderTable();
+    updateSummary();
+};
+
+// --- Initialization ---
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Initial Render
+    renderTable();
+    updateSummary();
+    
+    // Start real-time price loop
+    fetchLivePrices(); 
+    setInterval(fetchLivePrices, UPDATE_INTERVAL_MS);
+});

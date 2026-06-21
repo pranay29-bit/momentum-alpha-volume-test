@@ -21,7 +21,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);
                  display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem;}
 .brand-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald);}
 .header-row{display:flex;align-items:center;justify-content:space-between;
-            gap:1.5rem;flex-wrap:wrap;}
+            gap:1.5rem;flex-wrap:wrap;text-align:left;}
+.header-titles{flex:1;min-width:200px;text-align:center;}
 .header-titles h1{font-family:var(--sans);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;
            letter-spacing:-.03em;color:var(--text);margin-bottom:.2rem;}
 .header-titles p{color:var(--muted);font-size:.83rem;font-family:var(--mono);}
@@ -61,6 +62,14 @@ input:focus{border-color:var(--indigo);}
 .btn-link.green:hover{background:#d1fae5;}
 .btn-link.blue{background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue);}
 .btn-link.blue:hover{background:#dbeafe;}
+
+/* ── Login ── */
+.login-row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;}
+.login-status{color:var(--subtle);font-size:.78rem;font-family:var(--mono);
+               margin-top:.6rem;letter-spacing:.02em;}
+.btn-link.amber{background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber);}
+.btn-link.amber:hover{background:#fef3c7;}
+.btn-link:disabled{opacity:.6;cursor:default;}
 
 button{font-family:var(--mono);}
 

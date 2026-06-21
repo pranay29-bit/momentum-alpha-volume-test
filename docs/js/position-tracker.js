@@ -13,12 +13,8 @@ import {
 const positionsRef = collection(db, "positions");
 const positionsQuery = query(positionsRef, orderBy("createdAt", "desc"));
 
-const CORS_PROXY = "https://corsproxy.io/?url=";
-const LIVE_PRICE_INTERVAL_MS = 15000;
-
 let positions = [];
 let unsubscribe = null;
-let liveTimer = null;
 
 const loginBtn = document.getElementById("loginBtn");
 
@@ -40,17 +36,10 @@ onAuthStateChanged(auth, (user) => {
     unsubscribe();
     unsubscribe = null;
   }
-  if (liveTimer) {
-    clearInterval(liveTimer);
-    liveTimer = null;
-  }
 
   if (user) {
     loginBtn.textContent = `Logout (${user.displayName || user.email})`;
     subscribeToPositions();
-    // Start the live-price loop only while logged in (writes need auth).
-    fetchLivePrices();
-    liveTimer = setInterval(fetchLivePrices, LIVE_PRICE_INTERVAL_MS);
   } else {
     loginBtn.textContent = "Login with Google";
     positions = [];
@@ -62,8 +51,10 @@ function subscribeToPositions() {
   const tbody = document.getElementById("positionsTable");
   tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--subtle)">Loading…</td></tr>`;
 
-  // Live listener: ANY change (yours or anyone else's, including the
-  // auto-fetched price updates below) re-renders this for everyone.
+  // Prices are now updated server-side by the updatePricesScheduled Cloud
+  // Function (every 5 min) and written directly to Firestore. This
+  // listener just picks up whatever the latest value is — no browser-side
+  // fetching, no CORS proxy, no per-user tab dependency.
   unsubscribe = onSnapshot(
     positionsQuery,
     (snap) => {
@@ -75,40 +66,6 @@ function subscribeToPositions() {
       tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--subtle)">Could not load positions.</td></tr>`;
     }
   );
-}
-
-// ── Live price fetch (Yahoo Finance via public CORS proxy) ───────────────
-// IMPORTANT: Firestore security rules only allow the OWNER of a position to
-// update it. So each logged-in browser tab only fetches & writes prices for
-// the positions IT owns. Other people's positions update on their own tabs
-// and then sync to you automatically through the onSnapshot listener above.
-// If nobody who owns a given position currently has the page open, that
-// position's price simply won't refresh until its owner is back online —
-// there's no server-side cron here, this is a purely client-driven loop.
-async function fetchLivePrices() {
-  if (!auth.currentUser) return;
-
-  const myPositions = positions.filter((p) => p.ownerUid === auth.currentUser.uid);
-  if (myPositions.length === 0) return;
-
-  for (const pos of myPositions) {
-    try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${pos.symbol}?interval=1m`;
-      const response = await fetch(CORS_PROXY + encodeURIComponent(url));
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const data = await response.json();
-      const livePrice = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-
-      if (typeof livePrice === "number" && livePrice > 0 && livePrice !== pos.currentPrice) {
-        await updateDoc(doc(db, "positions", pos.id), { currentPrice: livePrice });
-      }
-    } catch (err) {
-      // Don't let one bad symbol/proxy hiccup break the loop or the UI —
-      // just log it and keep the last known price until the next tick.
-      console.warn(`Live price fetch failed for ${pos.symbol}:`, err.message);
-    }
-  }
 }
 
 function renderAll() {
@@ -165,8 +122,8 @@ function renderRow(p) {
   tbody.appendChild(tr);
 
   if (isOwner) {
-    // Manual override: lets the owner correct a price if the live fetch
-    // is stale, blocked, or the symbol mapping is wrong.
+    // Manual override: lets the owner correct a price between scheduled
+    // server-side refreshes, e.g. right after an intraday move.
     const priceInput = tr.querySelector(".price-input");
     priceInput.addEventListener("change", () => updateCurrentPrice(p.id, priceInput.value));
     const delBtn = tr.querySelector(".deleteBtn");

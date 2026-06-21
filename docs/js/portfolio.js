@@ -21,19 +21,39 @@ let positions = [];
 let unsubscribe = null;
 
 const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 const addBtn = document.getElementById("addBtn");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const loginStatus = document.getElementById("loginStatus");
 
 loginBtn.onclick = async () => {
-  if (auth.currentUser) {
-    await logout();
-  } else {
-    try {
-      await login();
-    } catch (err) {
-      console.error(err);
-      alert("Login failed. Please try again.");
-    }
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
+  if (!email || !password) {
+    loginStatus.textContent = "Enter email and password.";
+    return;
   }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Logging in…";
+  loginStatus.textContent = "";
+
+  try {
+    await login(email, password);
+    passwordInput.value = "";
+  } catch (err) {
+    console.error(err);
+    loginStatus.textContent = "Login failed. Check your email/password.";
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Login";
+  }
+};
+
+logoutBtn.onclick = async () => {
+  await logout();
 };
 
 // onAuthStateChanged fires on login, on logout, and on page load if a
@@ -46,10 +66,18 @@ onAuthStateChanged(auth, (user) => {
   }
 
   if (user) {
-    loginBtn.textContent = `Logout (${user.displayName || user.email})`;
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "";
+    emailInput.style.display = "none";
+    passwordInput.style.display = "none";
+    loginStatus.textContent = `Logged in as ${user.email}`;
     subscribeToPositions();
   } else {
-    loginBtn.textContent = "Login with Google";
+    loginBtn.style.display = "";
+    logoutBtn.style.display = "none";
+    emailInput.style.display = "";
+    passwordInput.style.display = "";
+    loginStatus.textContent = "";
     positions = [];
     renderAll();
   }
@@ -118,7 +146,7 @@ async function addPosition() {
       qty,
       riskPerShare,
       ownerUid: auth.currentUser.uid,
-      ownerName: auth.currentUser.displayName || auth.currentUser.email,
+      ownerName: auth.currentUser.email,
       createdAt: serverTimestamp()
     };
     // No optimistic local push needed anymore — the onSnapshot listener

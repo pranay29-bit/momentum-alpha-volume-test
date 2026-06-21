@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Position Tracker — Momentum Alpha</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/tracker.css"/>
+<script type="module" src="js/position-tracker.js"></script>
+</head>
+<body>
+<div class="topbar"></div>
+
+<header>
+  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
+  <div class="header-row">
+    <div class="header-titles">
+      <h1>Position Tracker</h1>
+      <p>Live P&amp;L % and R-multiple on every open position</p>
+    </div>
+    <div class="top-buttons">
+      <div class="nav-tabs">
+        <a href="index.html" class="btn-link">← Scanner</a>
+        <a href="position-size.html" class="btn-link blue">Position Size Calculator →</a>
+      </div>
+      <button id="loginBtn" class="btn-link green">Login with Google</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <section class="summary">
+    <div class="card">
+      <h3>Open Positions</h3>
+      <span id="openCount">0</span>
+    </div>
+    <div class="card">
+      <h3>Portfolio Heat</h3>
+      <span id="heat">0%</span>
+    </div>
+    <div class="card">
+      <h3>Avg R</h3>
+      <span id="avgR">0R</span>
+    </div>
+    <div class="card">
+      <h3>Winners / Losers</h3>
+      <span id="winLoss">0 / 0</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 class="section-title">Open Positions</h2>
+    <p style="font-family:var(--mono);font-size:.75rem;color:var(--subtle);margin-bottom:.75rem">
+      Update "Current Price" on your own positions to refresh P&amp;L % and R live for everyone.
+    </p>
+    <div class="tbl-wrap">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Owner</th>
+            <th>Entry</th>
+            <th>SL</th>
+            <th>Qty</th>
+            <th>Current Price</th>
+            <th>P&amp;L %</th>
+            <th>R Multiple</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody id="positionsTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Data sourced from NSE India &amp; Yahoo Finance &nbsp;·&nbsp;
+  Updated daily at 18:00 IST &nbsp;·&nbsp;
+  For informational purposes only — not financial advice
+</footer>
+
+</body>
+</html>

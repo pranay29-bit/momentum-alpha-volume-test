@@ -8,8 +8,7 @@ from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
 import {
   getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
+  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged
 }
@@ -29,15 +28,15 @@ export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-export async function login() {
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
+// Accounts are NOT self-signup. The admin creates each person's
+// email/password manually in Firebase Console -> Authentication -> Users.
+// Only those exact accounts can ever log in here.
+export async function login(email, password) {
+  await signInWithEmailAndPassword(auth, email, password);
 }
 
 export async function logout() {
   await signOut(auth);
 }
 
-// Re-exported so portfolio.js can react to login/logout (including the
-// auto-login Firebase does on page refresh if a session already exists).
 export { onAuthStateChanged };

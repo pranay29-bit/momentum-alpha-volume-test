@@ -49,30 +49,31 @@ async function fetchLivePrices() {
     renderTable();
     updateSummary();
 }
-
 // --- Rendering Functions ---
 
 function renderTable() {
     const tbody = document.getElementById("positionsTable");
+    // SAFETY CHECK: If we aren't on the tracker page, stop running.
+    if (!tbody) return; 
+
     tbody.innerHTML = "";
 
     if (positions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--subtle);">No open positions found.</td></tr>`;
+        // RESTORED HTML TAGS
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: gray;">No open positions found.</td></tr>`;
         return;
     }
 
     positions.forEach(pos => {
-        // Fallback to entry price if currentPrice hasn't loaded yet
         const currentP = pos.currentPrice || pos.entry; 
-        
         const pnl = calculatePnL(pos.entry, currentP);
         const rMult = calculateRMultiple(pos.entry, pos.sl, currentP);
         
-        // Color coding based on profitability
         const pnlColor = pnl >= 0 ? "color: #00c853;" : "color: #ff3d00;";
         const rColor = rMult >= 0 ? "color: #00c853;" : "color: #ff3d00;";
 
         const tr = document.createElement("tr");
+        // RESTORED HTML TAGS
         tr.innerHTML = `
             <td style="font-weight: 600;">${pos.symbol}</td>
             <td>${pos.owner}</td>
@@ -89,6 +90,10 @@ function renderTable() {
 }
 
 function updateSummary() {
+    // SAFETY CHECK: Ensure summary elements exist before updating
+    const openCountEl = document.getElementById("openCount");
+    if (!openCountEl) return;
+
     const openCount = positions.length;
     let totalR = 0;
     let winners = 0;
@@ -105,11 +110,9 @@ function updateSummary() {
 
     const avgR = openCount > 0 ? (totalR / openCount).toFixed(2) : 0;
 
-    document.getElementById("openCount").innerText = openCount;
+    openCountEl.innerText = openCount;
     document.getElementById("avgR").innerText = `${avgR}R`;
     document.getElementById("winLoss").innerText = `${winners} / ${losers}`;
-    
-    // Heat calculation 
     document.getElementById("heat").innerText = openCount > 0 ? "Active" : "Neutral";
 }
 

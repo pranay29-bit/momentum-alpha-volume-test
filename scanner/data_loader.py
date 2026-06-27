@@ -85,6 +85,16 @@ def _process_symbol(sym: str, data: pd.DataFrame, is_multi: bool) -> dict | None
         vol_data = compute_volume_action(df_sym)
         inside_bar = is_inside_candle(df_sym)  
 
+        # ── Close-based 52-week high/low flags (for Net New Highs breadth) ───
+        # Standard market-breadth "new high/new low" counts use the closing
+        # price reaching a new 52-week extreme, not the intraday High/Low.
+        close_series   = df_sym["Close"]
+        lookback       = min(252, len(close_series))
+        close_roll_max = close_series.rolling(window=lookback, min_periods=1).max()
+        close_roll_min = close_series.rolling(window=lookback, min_periods=1).min()
+        is_52w_high_close = bool(close_series.iloc[-1] >= close_roll_max.iloc[-1])
+        is_52w_low_close  = bool(close_series.iloc[-1] <= close_roll_min.iloc[-1])
+
         return {
             "symbol":  sym,
             "close":   tpl["close"],
@@ -107,6 +117,8 @@ def _process_symbol(sym: str, data: pd.DataFrame, is_multi: bool) -> dict | None
             "relative_volume": vol_data["relative_volume"],
             "bull_snort":     vol_data["bull_snort"],
             "inside_bar":     inside_bar,
+            "is_52w_high":    is_52w_high_close,
+            "is_52w_low":     is_52w_low_close,
         }
     except Exception as exc:
         logger.error("Error processing %s: %r", sym, exc)

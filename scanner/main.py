@@ -26,6 +26,7 @@ from .nse_client  import enrich_with_market_caps
 from .dashboard   import build_passing_dashboard, build_passing_ema10_dashboard, build_volume_action_dashboard, build_rocket_dashboard
 from .result_calendar import get_result_date
 from .indicators  import get_market_sentiment
+from . import net_new_highs as nnh
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -239,8 +240,12 @@ def run() -> None:
     sentiment = get_market_sentiment()
     logger.info("Market sentiment:\n%s", json.dumps(sentiment, indent=2, default=str))
 
+    # ── 9c. Net New Highs (market breadth) ────────────────────────────────────
+    logger.info("Computing Net New Highs breadth…")
+    nnh_stats = nnh.run(df, date_display)
+
     # ── 10. Update docs/index.html  (GitHub Pages landing page) ───────────────
-    _update_index(today_str, out_dir, len(passing), len(passing_ema10), sentiment=sentiment)
+    _update_index(today_str, out_dir, len(passing), len(passing_ema10), sentiment=sentiment, nnh_stats=nnh_stats)
 
     # ── 10. Console summary ───────────────────────────────────────────────────
     logger.info("── SUMMARY ──────────────────────────────")
@@ -252,7 +257,7 @@ def run() -> None:
 
 # ── Landing-page updater ──────────────────────────────────────────────────────
 
-def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, sentiment: dict | None = None) -> None:
+def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, sentiment: dict | None = None, nnh_stats: dict | None = None) -> None:
     """Regenerate docs/index.html with a link to today's dashboards."""
     docs_root  = Path(DOCS_DIR)
     index_path = docs_root / "index.html"
@@ -328,6 +333,7 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 
     # ── Build Market Sentiment HTML block ─────────────────────────────────────
     sentiment_html = _build_sentiment_html(sentiment or {})
+    nnh_html       = nnh.build_html(nnh_stats or {})
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -491,12 +497,15 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
       <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
     </div>
     <div class="top-buttons">
-      <a href="portfolio.html" class="btn-link green">📊 Portfolio Tracker</a>
+      <a href="position-size.html" class="btn-link green">📐 Position Size Calculator</a>
+      <a href="position-tracker.html" class="btn-link blue">📊 Position Tracker</a>
     </div>
   </div>
 </header>
 
 {sentiment_html}
+
+{nnh_html}
 
 <div class="container">
   <h2 class="section-title">Scan History</h2>

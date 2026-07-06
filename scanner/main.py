@@ -23,10 +23,11 @@ import pandas as pd
 from .config     import DOCS_DIR
 from .data_loader import download_all, load_symbols
 from .nse_client  import enrich_with_market_caps
-from .dashboard   import build_passing_dashboard, build_passing_ema10_dashboard, build_volume_action_dashboard, build_rocket_dashboard
+from .dashboard   import build_passing_dashboard, build_passing_ema10_dashboard, build_volume_action_dashboard, build_rocket_dashboard, build_industry_drilldown
 from .result_calendar import get_result_date
 from .indicators  import get_market_sentiment
 from . import net_new_highs as nnh
+from . import holidays as nse_holidays
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -53,18 +54,27 @@ def run() -> None:
     today_str    = today.strftime("%Y%m%d")
     date_display = today.strftime("%Y-%m-%d")
 
-    # ── Weekend guard ─────────────────────────────────────────────────────────
-    # NSE markets are closed on Saturday (5) and Sunday (6).
-    # Skip the scan entirely if today is a weekend day.
-    weekday = today.weekday()  # Monday=0 … Sunday=6
-    if weekday >= 5:
-        day_name = today.strftime("%A")
+    # ── Weekend / holiday guard ───────────────────────────────────────────────
+    # NSE is closed on Saturdays, Sundays, and the official 2026 holiday list
+    # (see scanner/holidays.py + data/nse_holidays_2026.csv). The scan still
+    # RUNS on these days (so a daily cron/GitHub Action never errors out),
+    # but the "date" used for the data/output folder is pinned to the most
+    # recent real trading day — so weekend/holiday runs never advance the
+    # date or overwrite a trading day's data with empty/duplicate data.
+    holidays_set = nse_holidays.load_holidays()
+    is_holiday   = nse_holidays.is_market_holiday(today.date(), holidays_set)
+    if is_holiday:
+        trading_date = nse_holidays.last_trading_day(today.date(), holidays_set)
         logger.warning(
-            "Today is %s (%s) — NSE markets are closed on weekends. "
-            "Scan skipped. No data will be generated.",
-            day_name, date_display,
+            "Today is %s (%s) — NSE market holiday/weekend. "
+            "Re-using last trading day %s; data will not be updated for a new date.",
+            today.strftime("%A"), today.strftime("%Y-%m-%d"), trading_date,
         )
-        sys.exit(0)
+        today_str    = trading_date.strftime("%Y%m%d")
+        date_display = trading_date.strftime("%Y-%m-%d")
+    else:
+        today_str    = today.strftime("%Y%m%d")
+        date_display = today.strftime("%Y-%m-%d")
 
     # ── Output directory (GitHub Pages root + dated sub-folder) ──────────────
     out_dir = Path(DOCS_DIR) / date_display
@@ -81,6 +91,18 @@ def run() -> None:
         logger.error("No valid data collected. Aborting.")
         sys.exit(1)
     logger.info("Collected rows for %d symbols.", len(df))
+
+    latest_data_date = pd.to_datetime(df["date"]).max().date()
+    today = datetime.today().date()
+
+    logger.info("Latest market data: %s", latest_data_date)
+
+    if latest_data_date < today:
+      logger.warning(
+        "Market data is stale! Latest=%s Today=%s",
+        latest_data_date,
+        today,
+    )
 
     # ── 3. RS percentile + condition flags ────────────────────────────────────
     df["rs_percentile"]        = df["12m_return_pct"].rank(pct=True) * 100.0
@@ -235,8 +257,8 @@ def run() -> None:
             known_symbols=known_symbols,
         )
 
-    # ── 9b. Market Sentiment (small-cap indices) ──────────────────────────────
-    logger.info("Fetching market sentiment (small-cap indices)…")
+    # ── 9b. Market Sentiment (NIFTY SMALLCAP 250 index) ──────────────────────
+    logger.info("Fetching market sentiment (NIFTY SMALLCAP 250)…")
     sentiment = get_market_sentiment()
     logger.info("Market sentiment:\n%s", json.dumps(sentiment, indent=2, default=str))
 
@@ -245,7 +267,7 @@ def run() -> None:
     nnh_stats = nnh.run(df, date_display)
 
     # ── 10. Update docs/index.html  (GitHub Pages landing page) ───────────────
-    _update_index(today_str, out_dir, len(passing), len(passing_ema10), sentiment=sentiment, nnh_stats=nnh_stats)
+    _update_index(today_str, out_dir, len(passing), len(passing_ema10), sentiment=sentiment, nnh_stats=nnh_stats, passing=passing)
 
     # ── 10. Console summary ───────────────────────────────────────────────────
     logger.info("── SUMMARY ──────────────────────────────")
@@ -257,7 +279,15 @@ def run() -> None:
 
 # ── Landing-page updater ──────────────────────────────────────────────────────
 
-def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, sentiment: dict | None = None, nnh_stats: dict | None = None) -> None:
+def _update_index(
+    today_str: str,
+    out_dir: Path,
+    n_passing: int,
+    n_elite: int,
+    sentiment: dict | None = None,
+    nnh_stats: dict | None = None,
+    passing: pd.DataFrame | None = None,
+) -> None:
     """Regenerate docs/index.html with a link to today's dashboards."""
     docs_root  = Path(DOCS_DIR)
     index_path = docs_root / "index.html"
@@ -331,48 +361,197 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
     </div>
   </div>"""
 
+    # ── Build Industry Group → Industry → Stock drill-down widget ─────────────
+    today_date_display = dated_dirs[0].name if dated_dirs else datetime.today().strftime("%Y-%m-%d")
+    today_slug          = today_date_display.replace("-", "")
+    today_dashboard_link = f"{today_date_display}/dashboard_{today_slug}.html"
+    try:
+        industry_html = build_industry_drilldown(
+            passing if passing is not None else pd.DataFrame(),
+            today_date_display,
+            dashboard_link=today_dashboard_link,
+        )
+    except Exception as exc:
+        logger.warning("Could not build industry drill-down widget: %s", exc)
+        industry_html = ""
+
+    # ── Build the "Dashboards" hub — every scanner + tool, arranged as cards ───
+    if dated_dirs:
+        _elite_link  = f"{today_date_display}/elite_dashboard_{today_slug}.html"
+        _volume_link = f"{today_date_display}/volume_dashboard_{today_slug}.html"
+        _rocket_link = f"{today_date_display}/rocket_dashboard_{today_slug}.html"
+    else:
+        _elite_link = _volume_link = _rocket_link = today_dashboard_link
+
+    hub_cards = [
+        dict(icon="📊", accent="indigo", title="Momentum Dashboard",
+             desc="Every stock passing all 8 Minervini trend-template conditions today.",
+             link=today_dashboard_link),
+        dict(icon="⚡", accent="emerald", title="Elite Dashboard",
+             desc="Momentum passes also trading above EMA10 — the highest-conviction setups.",
+             link=_elite_link),
+        dict(icon="🔵", accent="blue", title="Volume Action",
+             desc="Pocket pivots and unusual volume signals across the NSE universe.",
+             link=_volume_link),
+        dict(icon="🚀", accent="amber", title="Rocket Stocks",
+             desc="Momentum passes coiling inside a tight daily inside-bar, ready to fire.",
+             link=_rocket_link),
+    ]
+
+    hub_cards_html = ""
+    for c in hub_cards:
+        hub_cards_html += f"""
+      <a class="hub-card" href="{c['link']}" style="--accent:var(--{c['accent']});--accent-lt:var(--{c['accent']}-lt);--accent-mid:var(--{c['accent']}-mid)">
+        <div class="hub-icon">{c['icon']}</div>
+        <div class="hub-title">{c['title']}</div>
+        <div class="hub-desc">{c['desc']}</div>
+        <div class="hub-cta">Open dashboard <span class="hub-cta-arrow">&#8594;</span></div>
+      </a>"""
+
+    hub_html = f"""
+<div class="hub-section">
+  <div class="hub-header">
+    <div>
+      <div class="hub-eyebrow"><span class="hub-dot"></span>DASHBOARDS</div>
+      <h2 class="hub-heading">Everything, in one place</h2>
+      <p class="hub-sub">Live scan results for {today_date_display} &middot; refreshed daily at 18:00 IST</p>
+    </div>
+  </div>
+  <div class="hub-grid">{hub_cards_html}
+  </div>
+</div>"""
+
+    # ── Tools — kept visually separate; these are utilities, not scan dashboards ──
+    tool_cards = [
+        dict(icon="📐", accent="violet", title="Position Size Calculator",
+             desc="Size your next trade against account risk and stop-loss distance.",
+             link="position-size.html"),
+        dict(icon="📈", accent="navy", title="Position Tracker",
+             desc="Track open positions, targets, and stops in one place.",
+             link="position-tracker.html"),
+    ]
+
+    tool_cards_html = ""
+    for c in tool_cards:
+        tool_cards_html += f"""
+      <a class="hub-card tool-card" href="{c['link']}" style="--accent:var(--{c['accent']});--accent-lt:var(--{c['accent']}-lt);--accent-mid:var(--{c['accent']}-mid)">
+        <div class="hub-icon">{c['icon']}</div>
+        <div class="hub-title">{c['title']}</div>
+        <div class="hub-desc">{c['desc']}</div>
+        <div class="hub-cta">Open tool <span class="hub-cta-arrow">&#8594;</span></div>
+      </a>"""
+
+    tools_html = f"""
+<div class="hub-section tools-section">
+  <div class="hub-header">
+    <div>
+      <div class="hub-eyebrow"><span class="hub-dot" style="background:var(--violet);box-shadow:0 0 0 3px var(--violet-lt)"></span>TOOLS</div>
+      <h2 class="hub-heading">Trade planning &amp; tracking</h2>
+      <p class="hub-sub">Utilities to size and manage your trades — not scan results</p>
+    </div>
+  </div>
+  <div class="hub-grid tools-grid">{tool_cards_html}
+  </div>
+</div>"""
+
     # ── Build Market Sentiment HTML block ─────────────────────────────────────
     sentiment_html = _build_sentiment_html(sentiment or {})
     nnh_html       = nnh.build_html(nnh_stats or {})
+
+    # ── Shared cross-page nav bar — identical component on every page ─────────
+    site_nav_html = f"""
+<nav class="site-nav">
+  <a href="index.html" class="btn-link navy is-active">🏠 Home</a>
+  <a href="{today_dashboard_link}" class="btn-link indigo">📊 Momentum</a>
+  <a href="{_elite_link}" class="btn-link green">⚡ Elite</a>
+  <a href="{_volume_link}" class="btn-link blue">🔵 Volume</a>
+  <a href="{_rocket_link}" class="btn-link amber">🚀 Rocket</a>
+  <a href="position-size.html" class="btn-link violet">📐 Position Size</a>
+  <a href="position-tracker.html" class="btn-link navy">📈 Position Tracker</a>
+</nav>"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Momentum Alpha \u2014 NSE Trend Scanner</title>
+<title>Alpha Momentum \u2014 NSE Trend Scanner</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   :root{{
-    --bg:#f7f8fc;--surface:#fff;--border:#e2e6f0;--border2:#ccd1e4;
-    --text:#0f1629;--muted:#5a6282;--subtle:#8b93b5;
+    --bg:#ffffff;--surface:#fff;--surface-2:#fbfbfe;--surface2:#fbfbfe;
+    --border:#e5e8f0;--border2:#d4d9e8;--border-2:#d4d9e8;
+    --text:#0d1426;--muted:#5b6178;--subtle:#9499b3;
+    --navy:#0f1b3d;--navy2:#16234a;--navy-2:#16234a;--navy-lt:#eef1f8;--navy-mid:#c9d0e3;
     --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
     --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
     --blue:#2563eb;--blue-lt:#eff6ff;--blue-mid:#bfdbfe;
-    --amber:#d97706;--amber-lt:#fffbeb;--amber-mid:#fde68a;
-    --red:#dc2626;--red-lt:#fef2f2;
-    --sans:'Outfit',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;
+    --amber:#b45309;--amber-lt:#fffbeb;--amber-mid:#fde68a;
+    --violet:#7c3aed;--violet-lt:#f5f3ff;--violet-mid:#ddd6fe;
+    --red:#dc2626;--red-lt:#fef2f2;--red-mid:#fca5a5;
+    --sans:'Outfit',system-ui,-apple-system,sans-serif;--mono:'DM Mono','SF Mono','Courier New',monospace;
+    --radius:12px;--radius-sm:8px;--shadow-sm:0 1px 2px rgba(15,23,42,.04);--shadow-md:0 4px 16px -4px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04);
   }}
   *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0;}}
-  html{{font-size:14px;}}
+  html{{font-size:14px;-webkit-font-smoothing:antialiased;}}
   body{{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}}
-  .topbar{{height:3px;background:linear-gradient(90deg,#4f46e5,#059669);}}
+  .topbar{{height:3px;background:linear-gradient(90deg,var(--navy) 0%,var(--indigo) 55%,var(--emerald) 100%);}}
   header{{background:var(--surface);border-bottom:1px solid var(--border);
-          padding:2rem 3rem 1.6rem;text-align:center;}}
+          padding:1.65rem 2.5rem;text-align:center;}}
   .header-row{{display:flex;align-items:center;justify-content:space-between;
               gap:1.5rem;flex-wrap:wrap;text-align:left;}}
-  .header-titles{{flex:1;min-width:200px;text-align:center;}}
+  .header-titles{{flex:1;min-width:220px;text-align:center;}}
   .top-buttons{{display:flex;gap:.65rem;flex-wrap:wrap;}}
-  .brand-name-idx{{font-family:var(--mono);font-size:.65rem;font-weight:500;
-                   letter-spacing:.14em;text-transform:uppercase;color:var(--emerald);
-                   display:flex;align-items:center;justify-content:center;gap:.4rem;margin-bottom:.4rem;}}
-  .brand-dot{{width:8px;height:8px;border-radius:50%;background:var(--emerald);}}
-  header h1{{font-family:var(--sans);font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;
-             letter-spacing:-.03em;color:var(--text);margin:.25rem 0;}}
-  header p{{color:var(--muted);font-size:.83rem;font-family:var(--mono);}}
+  .brand-name-idx{{font-family:var(--mono);font-size:.66rem;font-weight:600;
+                   letter-spacing:.16em;text-transform:uppercase;color:var(--navy);
+                   display:flex;align-items:center;justify-content:center;gap:.5rem;margin-bottom:.7rem;}}
+  .brand-dot{{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 3px var(--emerald-lt);}}
+  header h1{{font-family:var(--sans);font-size:clamp(1.45rem,2.6vw,1.9rem);font-weight:700;
+             letter-spacing:-.025em;color:var(--text);margin-bottom:.22rem;}}
+  header p{{color:var(--muted);font-size:.82rem;font-family:var(--mono);}}
+
   .container{{max-width:1120px;margin:2rem auto;padding:0 1.5rem;}}
   h2.section-title{{font-family:var(--sans);font-size:1.05rem;font-weight:700;
                     letter-spacing:-.01em;margin-bottom:1rem;color:var(--text);}}
+
+  /* ── Dashboards hub ── */
+  .hub-section{{max-width:1120px;margin:2.2rem auto 2.4rem;padding:0 1.5rem;}}
+  .hub-header{{margin-bottom:1.1rem;}}
+  .hub-eyebrow{{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.62rem;
+               font-weight:700;letter-spacing:.14em;color:var(--indigo);margin-bottom:.4rem;}}
+  .hub-dot{{width:6px;height:6px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 3px var(--emerald-lt);}}
+  .hub-heading{{font-family:var(--sans);font-size:1.3rem;font-weight:700;letter-spacing:-.02em;
+               color:var(--text);margin-bottom:.3rem;}}
+  .hub-sub{{font-family:var(--sans);font-size:.8rem;color:var(--muted);}}
+  .hub-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;}}
+  .hub-card{{
+    position:relative;display:flex;flex-direction:column;gap:.6rem;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.35rem 1.4rem 1.25rem;box-shadow:var(--shadow-sm);
+    text-decoration:none;color:inherit;overflow:hidden;
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  }}
+  .hub-card::before{{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);}}
+  .hub-card:hover{{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--accent-mid);}}
+  .hub-tag{{position:absolute;top:.9rem;right:1rem;font-family:var(--mono);font-size:.56rem;font-weight:700;
+           letter-spacing:.08em;color:var(--subtle);background:var(--surface-2);border:1px solid var(--border);
+           border-radius:999px;padding:.15rem .5rem;}}
+  .hub-icon{{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+            font-size:1.1rem;background:var(--accent-lt);}}
+  .hub-title{{font-family:var(--sans);font-weight:700;font-size:.95rem;letter-spacing:-.01em;color:var(--text);}}
+  .hub-desc{{font-family:var(--sans);font-size:.78rem;color:var(--muted);line-height:1.5;flex:1;}}
+  .hub-cta{{font-family:var(--mono);font-size:.67rem;font-weight:600;letter-spacing:.03em;color:var(--accent);
+           display:flex;align-items:center;gap:.3rem;transition:gap .18s ease;}}
+  .hub-card:hover .hub-cta{{gap:.5rem;}}
+  .hub-cta-arrow{{transition:transform .18s ease;display:inline-block;}}
+  .hub-card:hover .hub-cta-arrow{{transform:translateX(3px);}}
+
+  /* Tools section — visually secondary/compact vs. the main Dashboards grid */
+  .tools-section{{margin-top:0;}}
+  .tools-grid{{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));max-width:640px;}}
+  .tool-card{{padding:1.1rem 1.2rem 1.05rem;}}
+  .tool-card .hub-icon{{width:34px;height:34px;font-size:1rem;}}
+  .tool-card .hub-title{{font-size:.9rem;}}
   /* Month accordion */
   .month-group{{margin-bottom:1.1rem;}}
   .month-accordion{{
@@ -382,9 +561,9 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
     font-family:var(--sans);font-size:.92rem;font-weight:600;color:var(--text);
     letter-spacing:-.01em;text-align:left;
     transition:background .15s,box-shadow .15s;
-    box-shadow:0 1px 3px rgba(0,0,0,.04);
+    box-shadow:var(--shadow-sm);
   }}
-  .month-accordion:hover{{background:var(--surface2);box-shadow:0 2px 8px rgba(0,0,0,.07);}}
+  .month-accordion:hover{{background:var(--surface-2);box-shadow:var(--shadow-md);}}
   .month-accordion[aria-expanded="true"]{{
     border-bottom-left-radius:0;border-bottom-right-radius:0;
     border-bottom-color:transparent;
@@ -409,23 +588,31 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
   /* Scan history table */
   table.history-table{{width:100%;border-collapse:collapse;background:var(--surface);overflow:hidden;}}
   .history-table th{{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
-      color:var(--muted);padding:.7rem 1.1rem;text-align:left;
-      background:#f1f3f9;border-bottom:1px solid var(--border);}}
+      color:var(--subtle);padding:.7rem 1.1rem;text-align:left;
+      background:var(--surface-2);border-bottom:1px solid var(--border);}}
   .history-table td{{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);font-size:.85rem;}}
   .history-table tr:last-child td{{border-bottom:none;}}
-  .history-table tr:hover td{{background:var(--bg);}}
+  .history-table tr:hover td{{background:var(--surface-2);}}
   .date-cell{{font-family:var(--mono);font-weight:600;font-size:.8rem;color:var(--text);}}
-  .btn-link{{display:inline-block;padding:.28rem .85rem;border-radius:999px;
-             font-family:var(--mono);font-size:.72rem;font-weight:500;
+  .btn-link{{display:inline-flex;align-items:center;gap:.35rem;padding:.32rem .9rem;border-radius:999px;
+             font-family:var(--mono);font-size:.72rem;font-weight:600;
              background:var(--indigo-lt);border:1px solid var(--indigo-mid);color:var(--indigo);
-             text-decoration:none;transition:background .14s;letter-spacing:.03em;}}
-  .btn-link:hover{{background:#dbeafe;}}
+             text-decoration:none;transition:background .14s,box-shadow .14s;letter-spacing:.03em;}}
+  .btn-link:hover{{background:#dde2fb;}}
   .btn-link.green{{background:var(--emerald-lt);border-color:var(--emerald-mid);color:var(--emerald);}}
-  .btn-link.green:hover{{background:#d1fae5;}}
+  .btn-link.green:hover{{background:#d7f8ea;}}
   .btn-link.amber{{background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber);}}
   .btn-link.amber:hover{{background:#fef3c7;}}
   .btn-link.blue{{background:var(--blue-lt);border-color:var(--blue-mid);color:var(--blue);}}
-  .btn-link.blue:hover{{background:#dbeafe;}}
+  .btn-link.blue:hover{{background:#dee9fd;}}
+  .btn-link.violet{{background:var(--violet-lt);border-color:var(--violet-mid);color:var(--violet);}}
+  .btn-link.violet:hover{{background:#ede7fd;}}
+  .btn-link.navy{{background:var(--navy-lt);border-color:var(--navy-mid);color:var(--navy);}}
+  .btn-link.navy:hover{{background:#e2e6f2;}}
+  .btn-link.is-active{{box-shadow:0 0 0 1px currentColor inset;font-weight:700;}}
+  /* Shared cross-page nav bar — identical component on every generated page */
+  .site-nav{{display:flex;flex-wrap:wrap;gap:.5rem;padding:.75rem 2.5rem;
+            background:var(--surface-2);border-bottom:1px solid var(--border);}}
   footer{{text-align:center;padding:1.5rem;font-family:var(--mono);font-size:.68rem;
           color:var(--subtle);border-top:1px solid var(--border);
           background:var(--surface);letter-spacing:.04em;margin-top:3rem;}}
@@ -433,8 +620,8 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
   /* ── Market Sentiment ── */
   .sentiment-section{{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}}
   .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.1rem;margin-top:.85rem;}}
-  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-                   padding:1.3rem 1.5rem;}}
+  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+                   padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);}}
   .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}}
   .sentiment-index-name{{font-weight:700;font-size:.9rem;letter-spacing:-.01em;}}
   .overall-badge{{display:inline-block;padding:.22rem .8rem;border-radius:999px;
@@ -463,11 +650,12 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
 
   /* ── Mobile responsiveness ── */
   @media (max-width: 768px){{
-    header{{padding:1.4rem 1.2rem 1.2rem;}}
+    header{{padding:1.25rem 1.1rem;}}
     .header-row{{flex-direction:column;align-items:stretch;}}
     .header-titles{{text-align:center;}}
     .top-buttons{{width:100%;}}
     .top-buttons .btn-link{{flex:1;text-align:center;}}
+    .site-nav{{padding:.65rem 1.1rem;}}
     .container{{margin:1.4rem auto;padding:0 1rem;}}
     .sentiment-section{{padding:0 1rem;}}
     .sentiment-grid{{grid-template-columns:1fr;}}
@@ -476,6 +664,9 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
     .history-table th, .history-table td{{padding:.6rem .75rem;font-size:.78rem;}}
     .btn-link{{padding:.24rem .65rem;font-size:.66rem;}}
     h2.section-title{{font-size:.95rem;}}
+    .hub-section{{padding:0 1rem;}}
+    .hub-heading{{font-size:1.1rem;}}
+    .hub-grid{{grid-template-columns:1fr 1fr;}}
   }}
   @media (max-width: 480px){{
     html{{font-size:13px;}}
@@ -484,26 +675,31 @@ def _update_index(today_str: str, out_dir: Path, n_passing: int, n_elite: int, s
     .sentiment-card{{padding:1rem 1.1rem;}}
     .ema-row{{gap:.45rem;}}
     .ema-pill{{font-size:.68rem;padding:.26rem .65rem;}}
+    .hub-grid{{grid-template-columns:1fr;}}
   }}
   </style>
 </head>
 <body>
 <div class="topbar"></div>
 <header>
-  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
+  <div class="brand-name-idx"><div class="brand-dot"></div>Alpha Momentum</div>
   <div class="header-row">
     <div class="header-titles">
       <h1>NSE Trend Scanner</h1>
       <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
     </div>
-    <div class="top-buttons">
-      <a href="position-size.html" class="btn-link green">📐 Position Size Calculator</a>
-      <a href="position-tracker.html" class="btn-link blue">📊 Position Tracker</a>
-    </div>
   </div>
 </header>
 
+{site_nav_html}
+
 {sentiment_html}
+
+{hub_html}
+
+{tools_html}
+
+{industry_html}
 
 {nnh_html}
 
@@ -536,39 +732,39 @@ def _build_sentiment_html(sentiment: dict) -> str:
 
     def _pill(label: str, above: bool | None, ema_val: float | None) -> str:
         if above is None:
-            css = "na"
+            css  = "na"
             text = f"{label} N/A"
         else:
-            css = "green" if above else "red"
+            css       = "green" if above else "red"
             direction = "above" if above else "below"
-            val_str = f" ({ema_val:,.0f})" if ema_val is not None else ""
-            text = f"Price {direction} {label}{val_str}"
+            val_str   = f" ({ema_val:,.0f})" if ema_val is not None else ""
+            text      = f"Price {direction} {label}{val_str}"
         return f'<span class="ema-pill {css}"><span class="ema-dot {css}"></span>{text}</span>'
 
     overall = sentiment.get("overall", "unavailable")
     overall_label = {"bullish": "🟢 Bullish", "bearish": "🔴 Bearish",
                      "mixed":   "🟡 Mixed",   "unavailable": "⬜ N/A"}.get(overall, "⬜ N/A")
 
-    cards_html = ""
-    for key in ("cnxsmallcap", "niftysmlcap250"):
-        info = sentiment.get(key, {})
-        name    = info.get("name", key)
-        close   = info.get("close")
-        ema10   = info.get("ema10")
-        ema20   = info.get("ema20")
-        above10 = info.get("above_ema10")
-        above20 = info.get("above_ema20")
+    # Only show one card — NIFTY SMALLCAP 250
+    info      = sentiment.get("cnxsmallcap", {})
+    close     = info.get("close")
+    ema10     = info.get("ema10")
+    ema20     = info.get("ema20")
+    above10   = info.get("above_ema10")
+    above20   = info.get("above_ema20")
 
-        close_str = f"₹{close:,.2f}" if close is not None else "N/A"
-        pill10    = _pill("EMA10", above10, ema10)
-        pill20    = _pill("EMA20", above20, ema20)
+    close_str = f"₹{close:,.2f}" if close is not None else "N/A"
+    ema10_str = f"₹{ema10:,.2f}" if ema10 is not None else "N/A"
+    pill10    = _pill("EMA10", above10, ema10)
+    pill20    = _pill("EMA20", above20, ema20)
 
-        cards_html += f"""
+    cards_html = f"""
     <div class="sentiment-card">
       <div class="sentiment-card-header">
-        <span class="sentiment-index-name">{name}</span>
+        <span class="sentiment-index-name">NIFTY Smallcap 250</span>
+        <span class="overall-badge {overall}">{overall_label}</span>
       </div>
-      <div class="close-val">Last Close: <strong>{close_str}</strong></div>
+      <div class="close-val">Last Close: <strong>{close_str}</strong> &nbsp;·&nbsp; 10-EMA: <strong>{ema10_str}</strong></div>
       <div class="ema-row">
         {pill10}
         {pill20}
@@ -583,7 +779,7 @@ def _build_sentiment_html(sentiment: dict) -> str:
     <span class="overall-badge {overall}">{overall_label}</span>
   </div>
   <p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem;">
-    Small-cap index health based on 10-EMA &amp; 20-EMA — updated each scan run.
+    NIFTY Smallcap 250 index — price vs 10-EMA and 20-EMA &middot; updated each scan run.
   </p>
   <div class="sentiment-grid">
     {cards_html}

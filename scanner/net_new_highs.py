@@ -66,10 +66,14 @@ def compute_today_counts(df: pd.DataFrame) -> dict:
 def _load_history() -> pd.DataFrame:
     if HISTORY_PATH.exists():
         try:
-            return pd.read_csv(HISTORY_PATH, parse_dates=["date"])
+            df = pd.read_csv(HISTORY_PATH)
+            df["date"] = pd.to_datetime(df["date"])
+            return df
         except Exception as exc:
             logger.warning("Could not read NNH history (%s) — starting fresh.", exc)
-    return pd.DataFrame(columns=["date", "new_highs", "new_lows", "net", "total"])
+    empty = pd.DataFrame(columns=["date", "new_highs", "new_lows", "net", "total"])
+    empty["date"] = pd.to_datetime(empty["date"])
+    return empty
 
 
 def _save_history(hist: pd.DataFrame) -> None:
@@ -94,6 +98,7 @@ def update_history(date_str: str, counts: dict) -> pd.DataFrame:
         "total":     counts["total"],
     }])
     hist = pd.concat([hist, new_row], ignore_index=True).sort_values("date").reset_index(drop=True)
+    hist["date"] = pd.to_datetime(hist["date"])
     _save_history(hist)
     return hist
 
@@ -112,11 +117,43 @@ def _consecutive_bias(net_series: pd.Series, streak: int = BIAS_STREAK) -> str:
     return "neutral"
 
 
-def compute_stats(history: pd.DataFrame) -> dict:
+def _stateful_bias_series(net_series: pd.Series, streak: int = BIAS_STREAK) -> list[str]:
+    """
+    Sticky bias per day, matching the Pine Script's background-shading behaviour:
+    the state flips to bullish once `streak` consecutive positive days occur,
+    flips to bearish once `streak` consecutive negative days occur, and otherwise
+    holds the previous state (rather than flickering day to day).
+    """
+    state = "neutral"
+    pos_streak = 0
+    neg_streak = 0
+    out: list[str] = []
+    for v in net_series:
+        if v > 0:
+            pos_streak += 1
+            neg_streak = 0
+        elif v < 0:
+            neg_streak += 1
+            pos_streak = 0
+        else:
+            pos_streak = 0
+            neg_streak = 0
+
+        if pos_streak >= streak:
+            state = "bullish"
+        elif neg_streak >= streak:
+            state = "bearish"
+        out.append(state)
+    return out
+
+
+
+def compute_stats(history: pd.DataFrame, chart_sessions: int = 180) -> dict:
     """
     Build the full NNH stats dict used to render the dashboard card:
       today's high/low/net/total, raw 3-day bias, smoothed 10-day SMA + bias,
-      and a short recent series for a sparkline.
+      and a longer per-day series (date, net, sma, bias, highs, lows) used to
+      draw the TradingView-style histogram + background-shaded chart.
     """
     if history.empty:
         return {
@@ -124,13 +161,14 @@ def compute_stats(history: pd.DataFrame) -> dict:
             "new_highs": 0, "new_lows": 0, "net": 0, "total": 0,
             "pct_highs": 0.0, "pct_lows": 0.0,
             "bias": "neutral", "sma": 0.0, "sma_bias": "neutral",
-            "history": [],
+            "history": [], "chart": [],
         }
 
     history = history.sort_values("date").reset_index(drop=True)
-    history["sma"] = history["net"].rolling(window=SMA_WINDOW, min_periods=1).mean()
+    history["sma"]  = history["net"].rolling(window=SMA_WINDOW, min_periods=1).mean()
+    history["bias"] = _stateful_bias_series(history["net"])
 
-    today = history.iloc[-1]
+    today    = history.iloc[-1]
     bias     = _consecutive_bias(history["net"])
     sma_val  = float(today["sma"])
     sma_bias = "bullish" if sma_val > 0 else ("bearish" if sma_val < 0 else "neutral")
@@ -142,6 +180,10 @@ def compute_stats(history: pd.DataFrame) -> dict:
     recent = history.tail(20)[["date", "net", "sma"]].copy()
     recent["date"] = recent["date"].dt.strftime("%Y-%m-%d")
 
+    chart = history.tail(chart_sessions)[["date", "net", "sma", "bias", "new_highs", "new_lows"]].copy()
+    chart["date"] = chart["date"].dt.strftime("%Y-%m-%d")
+    chart["sma"]  = chart["sma"].round(2)
+
     return {
         "available":  True,
         "new_highs":  int(today["new_highs"]),
@@ -150,10 +192,11 @@ def compute_stats(history: pd.DataFrame) -> dict:
         "total":      int(today["total"]),
         "pct_highs":  pct_highs,
         "pct_lows":   pct_lows,
-        "bias":       bias,        # 3-day consecutive raw bias
+        "bias":       bias,        # 3-day consecutive raw bias (today)
         "sma":        round(sma_val, 1),
         "sma_bias":   sma_bias,    # 10-day SMA bias
         "history":    recent.to_dict("records"),
+        "chart":      chart.to_dict("records"),
     }
 
 
@@ -173,7 +216,9 @@ def run(df: pd.DataFrame, date_str: str) -> dict:
 # ── 4. HTML card for the landing page ─────────────────────────────────────────
 
 def build_html(stats: dict) -> str:
-    """Render the Net New Highs card as a self-contained HTML block."""
+    """Render the Net New Highs section: chart with background bias shading,
+    10-day SMA line, and a collapsible new-highs/new-lows table — modeled on
+    Nitin R's TradingView Net New Highs script."""
     if not stats.get("available"):
         return """
 <div class="sentiment-section">
@@ -183,38 +228,28 @@ def build_html(stats: dict) -> str:
   </div>
 </div>"""
 
+    import json as _json
+
     badge_map = {
         "bullish": ("bullish", "🟢 Bullish"),
         "bearish": ("bearish", "🔴 Bearish"),
         "neutral": ("mixed",   "🟡 Neutral"),
     }
-    bias_css, bias_label       = badge_map.get(stats["bias"],     ("mixed", "🟡 Neutral"))
-    sma_css,  sma_label        = badge_map.get(stats["sma_bias"], ("mixed", "🟡 Neutral"))
+    bias_css, bias_label = badge_map.get(stats["bias"],     ("mixed", "🟡 Neutral"))
+    sma_css,  sma_label  = badge_map.get(stats["sma_bias"], ("mixed", "🟡 Neutral"))
 
-    net      = stats["net"]
-    net_css  = "green" if net > 0 else ("red" if net < 0 else "na")
-    net_str  = f"{net:+d}"
+    net     = stats["net"]
+    net_css = "green" if net > 0 else ("red" if net < 0 else "na")
+    net_str = f"{net:+d}"
 
-    # Tiny inline sparkline of recent NNH net values (no JS dependency)
-    hist = stats.get("history", [])
-    if hist:
-        vals = [h["net"] for h in hist]
-        vmax = max(1, max(abs(v) for v in vals))
-        bars = ""
-        for h in hist:
-            v = h["net"]
-            height = max(4, round(abs(v) / vmax * 26))
-            color  = "var(--emerald)" if v >= 0 else "var(--red)"
-            align  = "flex-end" if v >= 0 else "flex-start"
-            bars += (
-                f'<div title="{h["date"]}: {v:+d}" '
-                f'style="width:7px;height:28px;display:flex;align-items:{align}">'
-                f'<div style="width:100%;height:{height}px;background:{color};border-radius:2px"></div>'
-                f"</div>"
-            )
-        sparkline = f'<div style="display:flex;gap:2px;align-items:center;margin-top:.6rem">{bars}</div>'
-    else:
-        sparkline = ""
+    chart_data = _json.dumps(stats.get("chart", []))
+    table_rows = "".join(
+        f"<tr><td>{r['date']}</td>"
+        f"<td style='color:var(--emerald)'>{r['new_highs']}</td>"
+        f"<td style='color:var(--red)'>{r['new_lows']}</td>"
+        f"<td style='color:{'var(--emerald)' if r['net']>=0 else 'var(--red)'}'>{r['net']:+d}</td></tr>"
+        for r in reversed(stats.get("chart", [])[-20:])
+    )
 
     return f"""
 <div class="sentiment-section">
@@ -224,31 +259,155 @@ def build_html(stats: dict) -> str:
   </div>
   <p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem;">
     NSE stocks making new 52-week highs minus new 52-week lows &middot;
-    bias confirmed after {BIAS_STREAK} consecutive days &middot; smoothed with a {SMA_WINDOW}-day SMA.
+    background shows bias confirmed after {BIAS_STREAK} consecutive days &middot;
+    smoothed with a {SMA_WINDOW}-day SMA.
   </p>
-  <div class="sentiment-grid">
-    <div class="sentiment-card">
-      <div class="sentiment-card-header">
-        <span class="sentiment-index-name">Today's Breadth</span>
-      </div>
-      <div class="close-val">Net New Highs: <strong>{net_str}</strong>
-        &nbsp;(<span style="color:var(--emerald)">{stats['new_highs']} highs</span> /
-        <span style="color:var(--red)">{stats['new_lows']} lows</span>
-        of {stats['total']} stocks)</div>
-      <div class="ema-row">
-        <span class="ema-pill {net_css}"><span class="ema-dot {net_css}"></span>{stats['pct_highs']}% at new highs</span>
-        <span class="ema-pill {'red' if stats['pct_lows'] else 'na'}"><span class="ema-dot {'red' if stats['pct_lows'] else 'na'}"></span>{stats['pct_lows']}% at new lows</span>
-      </div>
-      {sparkline}
-      <div class="sentiment-legend">3-day confirmed bias &middot; bars = last 20 sessions' net reading</div>
+
+  <div class="sentiment-card" style="margin-bottom:1.1rem;">
+    <div class="sentiment-card-header">
+      <span class="sentiment-index-name">Net New Highs &nbsp;
+        <strong style="color:{'var(--emerald)' if net>=0 else 'var(--red)'}">{net_str}</strong>
+      </span>
+      <span class="overall-badge {sma_css}">10-SMA {stats['sma']:+.1f} &middot; {sma_label}</span>
     </div>
-    <div class="sentiment-card">
-      <div class="sentiment-card-header">
-        <span class="sentiment-index-name">10-Day Smoothed Bias</span>
-        <span class="overall-badge {sma_css}">{sma_label}</span>
-      </div>
-      <div class="close-val">10-SMA of Net New Highs: <strong>{stats['sma']:+.1f}</strong></div>
-      <div class="sentiment-legend">Smoothing reduces day-to-day whipsaws in the raw NNH reading.</div>
+    <div class="close-val" style="margin-bottom:.6rem;">
+      <span style="color:var(--emerald)">{stats['new_highs']} new highs</span> &nbsp;/&nbsp;
+      <span style="color:var(--red)">{stats['new_lows']} new lows</span> &nbsp;
+      of {stats['total']} stocks &nbsp;
+      <span style="color:var(--muted);font-size:.8rem;">
+        ({stats['pct_highs']}% / {stats['pct_lows']}%)
+      </span>
+    </div>
+    <div style="position:relative;height:220px;">
+      <canvas id="nnhChart"></canvas>
+    </div>
+    <div class="sentiment-legend" style="margin-top:.5rem;">
+      Green/red background = sticky 3-day-confirmed bullish/bearish bias &middot;
+      bars = daily Net New Highs &middot; amber line = {SMA_WINDOW}-day SMA
     </div>
   </div>
-</div>"""
+
+  <div class="sentiment-card" style="max-width:640px;">
+    <div class="sentiment-card-header">
+      <button onclick="toggleMonth(this)" aria-expanded="false"
+        style="background:none;border:none;cursor:pointer;padding:0;font:inherit;color:var(--text);font-weight:600;">
+        📋 New Highs / New Lows table (last 20 sessions) ▾
+      </button>
+    </div>
+    <div class="month-body">
+      <table style="width:100%;font-size:.82rem;border-collapse:collapse;">
+        <thead>
+          <tr style="text-align:left;border-bottom:1px solid var(--border);">
+            <th style="padding:.35rem .5rem;">Date</th>
+            <th style="padding:.35rem .5rem;">New Highs</th>
+            <th style="padding:.35rem .5rem;">New Lows</th>
+            <th style="padding:.35rem .5rem;">Net</th>
+          </tr>
+        </thead>
+        <tbody>{table_rows}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="js/chart.umd.js"></script>
+<script>
+(function() {{
+  const nnhData = {chart_data};
+  if (!nnhData.length) return;
+  if (typeof Chart === 'undefined') {{
+    const el = document.getElementById('nnhChart');
+    if (el && el.parentElement) {{
+      el.parentElement.innerHTML = '<div style="font-size:.8rem;color:var(--muted);padding:1rem 0;">Chart library failed to load — check your internet connection or ad-blocker.</div>';
+    }}
+    return;
+  }}
+
+  const labels = nnhData.map(d => d.date);
+  const netVals = nnhData.map(d => d.net);
+  const smaVals = nnhData.map(d => d.sma);
+  const barColors = netVals.map(v => v >= 0 ? 'rgba(5,150,105,0.85)' : 'rgba(220,38,38,0.85)');
+
+  // Background shading plugin — draws bullish/bearish zones behind the bars
+  const biasBackgroundPlugin = {{
+    id: 'biasBackground',
+    beforeDatasetsDraw(chart) {{
+      const {{ctx, chartArea, scales}} = chart;
+      if (!chartArea) return;
+      const xScale = scales.x;
+      ctx.save();
+      let segStart = 0;
+      for (let i = 0; i <= nnhData.length; i++) {{
+        const curBias = i < nnhData.length ? nnhData[i].bias : null;
+        const prevBias = i > 0 ? nnhData[i - 1].bias : null;
+        if (curBias !== prevBias) {{
+          if (prevBias && prevBias !== 'neutral') {{
+            const xStart = xScale.getPixelForValue(segStart) - (xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2;
+            const xEnd   = xScale.getPixelForValue(i - 1) + (xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2;
+            ctx.fillStyle = prevBias === 'bullish' ? 'rgba(5,150,105,0.10)' : 'rgba(220,38,38,0.10)';
+            ctx.fillRect(xStart, chartArea.top, xEnd - xStart, chartArea.bottom - chartArea.top);
+          }}
+          segStart = i;
+        }}
+      }}
+      ctx.restore();
+    }}
+  }};
+
+  new Chart(document.getElementById('nnhChart'), {{
+    type: 'bar',
+    data: {{
+      labels: labels,
+      datasets: [
+        {{
+          type: 'bar',
+          label: 'Net New Highs',
+          data: netVals,
+          backgroundColor: barColors,
+          borderWidth: 0,
+          barPercentage: 0.9,
+          categoryPercentage: 0.9,
+          order: 2,
+        }},
+        {{
+          type: 'line',
+          label: '{SMA_WINDOW}-day SMA',
+          data: smaVals,
+          borderColor: '#d97706',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.25,
+          order: 1,
+        }},
+      ],
+    }},
+    plugins: [biasBackgroundPlugin],
+    options: {{
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {{ mode: 'index', intersect: false }},
+      plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{
+          callbacks: {{
+            footer: (items) => {{
+              const d = nnhData[items[0].dataIndex];
+              return `Highs: ${{d.new_highs}}  Lows: ${{d.new_lows}}  Bias: ${{d.bias}}`;
+            }}
+          }}
+        }},
+      }},
+      scales: {{
+        x: {{
+          ticks: {{ maxTicksLimit: 10, font: {{ size: 10 }} }},
+          grid: {{ display: false }},
+        }},
+        y: {{
+          ticks: {{ font: {{ size: 10 }} }},
+          grid: {{ color: 'rgba(0,0,0,0.05)' }},
+        }},
+      }},
+    }},
+  }});
+}})();
+</script>"""

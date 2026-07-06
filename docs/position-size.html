@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Position Size Calculator — Momentum Alpha</title>
+<title>Position Size Calculator — Alpha Momentum</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/tracker.css"/>
 <script type="module" src="js/position-size.js"></script>
@@ -12,18 +12,18 @@
 <div class="topbar"></div>
 
 <header>
-  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
+  <div class="brand-name-idx"><div class="brand-dot"></div>Alpha Momentum</div>
   <div class="header-row">
     <div class="header-titles">
-      <h1>Position Size Calculator</h1>
-      <p>Risk-based quantity sizing · Shared across the team</p>
+      <h1>📐 Position Size Calculator</h1>
+      <p>Risk-based quantity sizing · saved to your account</p>
     </div>
     <div class="top-buttons">
       <div class="nav-tabs">
         <a href="index.html" class="btn-link">← Scanner</a>
         <a href="position-tracker.html" class="btn-link blue">Position Tracker →</a>
       </div>
-      <button id="loginBtn" class="btn-link green">Login with Google</button>
+      <button id="loginBtn" class="btn-link navy">Login with Google</button>
     </div>
   </div>
 </header>
@@ -31,23 +31,46 @@
 <div class="container">
 
   <section class="panel">
-    <h2 class="section-title">Portfolio Settings</h2>
+    <h2 class="section-title"><span class="dot"></span>Portfolio Settings</h2>
     <div class="settings">
-      <input id="portfolioSize" type="number" placeholder="Portfolio Size (e.g. 1000000)"/>
-      <select id="riskType">
-        <option value="percent">Risk as % of portfolio</option>
-        <option value="absolute">Risk as ₹ amount</option>
-      </select>
-      <input id="riskValue" type="number" placeholder="Risk value (e.g. 1 or 10000)"/>
+      <div class="field">
+        <label class="field-label" for="portfolioSize">Portfolio Size (₹)</label>
+        <input id="portfolioSize" type="number" placeholder="e.g. 1000000"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="riskType">Risk Basis</label>
+        <select id="riskType">
+          <option value="percent">Risk as % of portfolio</option>
+          <option value="absolute">Risk as ₹ amount</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="riskValue">Risk Value</label>
+        <input id="riskValue" type="number" placeholder="e.g. 1 or 10000"/>
+      </div>
     </div>
+    <p id="settingsStatus" class="login-status">These stay fixed until you change them — saved to your account and shown on the Position Tracker page too.</p>
   </section>
 
   <section class="panel">
-    <h2 class="section-title">Calculate Position Size</h2>
+    <h2 class="section-title"><span class="dot"></span>Calculate Position Size</h2>
     <div class="add-position">
-      <input id="symbol" placeholder="TCS.NS"/>
-      <input id="entry" type="number" placeholder="Entry Price"/>
-      <input id="stop" type="number" placeholder="Stop Loss"/>
+      <div class="field">
+        <label class="field-label" for="symbol">Symbol</label>
+        <input id="symbol" placeholder="TCS.NS"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="dateBought">Date Bought</label>
+        <input id="dateBought" type="date"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="entry">Entry Price</label>
+        <input id="entry" type="number" placeholder="e.g. 3850"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="stop">Stop Loss</label>
+        <input id="stop" type="number" placeholder="e.g. 3700"/>
+      </div>
       <button id="addBtn" class="btn-link blue">+ Add Position</button>
     </div>
 
@@ -59,6 +82,10 @@
       <div class="stat">
         <label>Risk / Share</label>
         <span id="previewRiskPerShare">—</span>
+      </div>
+      <div class="stat">
+        <label>Risk % (Entry–SL)</label>
+        <span id="previewRiskPct">—</span>
       </div>
       <div class="stat">
         <label>Quantity To Buy</label>

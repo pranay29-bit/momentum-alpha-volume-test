@@ -82,35 +82,54 @@ async function fetchLivePrice(symbol) {
 }
 
 async function updateAllPrices() {
-  const snap = await db.collection("positions").get();
+  // IMPORTANT: positions live under users/{uid}/positions, but the app
+  // never explicitly creates a users/{uid} parent document — it only ever
+  // writes into the subcollection. Firestore won't list a parent doc in a
+  // plain collection("users").get() query unless that doc itself was
+  // written at some point, so we use a collectionGroup query instead,
+  // which finds every "positions" subcollection across all users
+  // regardless of whether their parent doc exists.
+  const positionsSnap = await db.collectionGroup("positions").get();
 
-  if (snap.empty) {
+  if (positionsSnap.empty) {
     console.log("No open positions — nothing to update.");
     return;
   }
 
-  const bySymbol = new Map();
-  snap.forEach((doc) => {
-    const symbol = doc.data().symbol;
+  const bySymbol = new Map(); // symbol -> [{uid, docId}]
+
+  positionsSnap.forEach((posDoc) => {
+    // Skip anything that isn't actually under users/{uid}/positions —
+    // e.g. leftover docs in an old top-level "positions" collection from
+    // a previous version of this app. Those have no grandparent, so
+    // parent.parent is null instead of a uid.
+    const uid = posDoc.ref.parent.parent?.id;
+    if (!uid) {
+      console.warn(`Skipping ${posDoc.ref.path} — not under users/{uid}/positions`);
+      return;
+    }
+
+    const symbol = posDoc.data().symbol;
     if (!bySymbol.has(symbol)) bySymbol.set(symbol, []);
-    bySymbol.get(symbol).push(doc.id);
+    bySymbol.get(symbol).push({ uid, docId: posDoc.id });
   });
 
   let updated = 0;
   let failed = 0;
   const batch = db.batch();
 
-  for (const [symbol, docIds] of bySymbol.entries()) {
+  for (const [symbol, refs] of bySymbol.entries()) {
     try {
       const price = await fetchLivePrice(symbol);
-      docIds.forEach((id) => {
-        batch.update(db.collection("positions").doc(id), { currentPrice: price });
+      refs.forEach(({ uid, docId }) => {
+        const ref = db.collection("users").doc(uid).collection("positions").doc(docId);
+        batch.update(ref, { currentPrice: price });
       });
-      updated += docIds.length;
+      updated += refs.length;
       console.log(`✓ ${symbol}: ${price}`);
     } catch (err) {
       console.warn(`✗ ${symbol}: ${err.message}`);
-      failed += docIds.length;
+      failed += refs.length;
     }
   }
 

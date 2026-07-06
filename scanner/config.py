@@ -1,7 +1,7 @@
 """
 scanner/config.py
 -----------------
-All tuneable parameters for the Momentum Alpha scanner.
+All tuneable parameters for the Alpha Momentum scanner.
 Override any value via environment variables before running.
 """
 
@@ -14,7 +14,7 @@ DATA_DIR     = ROOT_DIR / "data"
 WEB_DIR      = ROOT_DIR / "web"
 DOCS_DIR     = ROOT_DIR / "docs"          # GitHub Pages root
 
-CSV_PATH     = os.getenv("NSE_CSV_PATH", str(DATA_DIR / "NSE_stocks_test.csv"))
+CSV_PATH     = os.getenv("NSE_CSV_PATH", str(DATA_DIR / "NSE_Stocks.csv"))
 SYMBOL_COLUMN = "Symbol"
 EXCHANGE_SUFFIX = ".NS"
 

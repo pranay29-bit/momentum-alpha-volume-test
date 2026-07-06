@@ -28,6 +28,7 @@ from .result_calendar import get_result_date
 from .indicators  import get_market_sentiment
 from . import net_new_highs as nnh
 from . import holidays as nse_holidays
+from scanner.ranking import calculate_minervini_score
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(

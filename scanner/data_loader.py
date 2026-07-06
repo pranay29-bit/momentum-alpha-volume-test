@@ -95,8 +95,11 @@ def _process_symbol(sym: str, data: pd.DataFrame, is_multi: bool) -> dict | None
         is_52w_high_close = bool(close_series.iloc[-1] >= close_roll_max.iloc[-1])
         is_52w_low_close  = bool(close_series.iloc[-1] <= close_roll_min.iloc[-1])
 
+        last_date = df_sym.index[-1]
+        
         return {
             "symbol":  sym,
+            "date": last_date.strftime("%Y-%m-%d"),
             "close":   tpl["close"],
             "MA12":    tpl["MA12"],  "MA36":  tpl["MA36"],
             "MA50":    tpl["MA50"],  "MA150": tpl["MA150"],
@@ -125,11 +128,60 @@ def _process_symbol(sym: str, data: pd.DataFrame, is_multi: bool) -> dict | None
         return None
 
 
+def _retry_with_bse(failed_symbols: list[str], meta: pd.DataFrame) -> list[dict]:
+    """
+    Retry any symbols that failed to fetch on NSE (.NS) using the BSE (.BO)
+    suffix instead. Some smaller/delisted-on-NSE tickers are still tradeable
+    on BSE, so this recovers data that would otherwise be silently dropped.
+    The output row's `symbol` field keeps the ORIGINAL .NS name (so industry
+    metadata joins / dashboard links stay consistent) even though the price
+    data underneath actually came from BSE.
+    """
+    recovered: list[dict] = []
+    bo_candidates = [s for s in failed_symbols if s.endswith(".NS")]
+    if not bo_candidates:
+        return recovered
+
+    bo_map = {s: s[: -len(".NS")] + ".BO" for s in bo_candidates}
+    bo_symbols = list(bo_map.values())
+
+    logger.info("Retrying %d failed NSE symbols on BSE (.BO)…", len(bo_symbols))
+
+    for i, batch in enumerate(_chunk(bo_symbols, BATCH_SIZE), start=1):
+        if i > 1:
+            time.sleep(_BATCH_DELAY)
+        try:
+            data = yf.download(
+                tickers=batch, period=PERIOD, interval=INTERVAL,
+                group_by="ticker", auto_adjust=True, threads=False, progress=False,
+            )
+        except Exception as exc:
+            logger.warning("BSE fallback batch %d failed: %s", i, exc)
+            continue
+        if data is None or data.empty:
+            continue
+
+        is_multi = isinstance(data.columns, pd.MultiIndex)
+        for bo_sym in batch:
+            row = _process_symbol(bo_sym, data, is_multi)
+            if row:
+                original_ns = bo_sym[: -len(".BO")] + ".NS"
+                row["symbol"] = original_ns  # keep NSE-style name for downstream joins/links
+                row["data_source"] = "BSE"
+                recovered.append(row)
+                logger.info("Recovered %s via BSE (.BO) fallback.", original_ns)
+
+    return recovered
+
+
 def download_all(symbols: list[str]) -> pd.DataFrame:
     """
     Download price history for all *symbols* in batches and return a
     consolidated DataFrame with indicators + trend-template flags,
     enriched with Industry Group and Industry from NSE_Stocks.csv.
+
+    Any symbol that fails to fetch on NSE (.NS) is automatically retried
+    on BSE (.BO) before being dropped — see _retry_with_bse().
     """
     # Load industry metadata once
     try:
@@ -139,6 +191,7 @@ def download_all(symbols: list[str]) -> pd.DataFrame:
         meta = pd.DataFrame()
 
     all_rows: list[dict] = []
+    failed_symbols: list[str] = []
     total = ceil(len(symbols) / BATCH_SIZE)
 
     for i, batch in enumerate(_chunk(symbols, BATCH_SIZE), start=1):
@@ -177,12 +230,15 @@ def download_all(symbols: list[str]) -> pd.DataFrame:
                     )
                 except Exception as exc2:
                     logger.error("Batch %d retry also failed: %s", i, exc2)
+                    failed_symbols.extend(batch)
                     continue
             else:
                 logger.error("Batch %d download failed: %s", i, exc)
+                failed_symbols.extend(batch)
                 continue
 
         if data is None or data.empty:
+            failed_symbols.extend(batch)
             continue
 
         is_multi = isinstance(data.columns, pd.MultiIndex)
@@ -190,6 +246,18 @@ def download_all(symbols: list[str]) -> pd.DataFrame:
             row = _process_symbol(sym, data, is_multi)
             if row:
                 all_rows.append(row)
+            else:
+                failed_symbols.append(sym)
+
+    # ── BSE fallback for anything that failed on NSE ──────────────────────────
+    if failed_symbols:
+        recovered_rows = _retry_with_bse(failed_symbols, meta)
+        all_rows.extend(recovered_rows)
+        still_missing = len(failed_symbols) - len(recovered_rows)
+        logger.info(
+            "BSE fallback recovered %d/%d symbols (%d still unavailable).",
+            len(recovered_rows), len(failed_symbols), still_missing,
+        )
 
     df = pd.DataFrame(all_rows)
 

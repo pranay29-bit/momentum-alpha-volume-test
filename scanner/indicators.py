@@ -34,104 +34,122 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["inside_bar"] = (df["High"] < df["High"].shift(1)) & (df["Low"] > df["Low"].shift(1))  # ← ADD THIS
     return df
 
-def get_market_sentiment() -> dict:
+def get_market_sentiment(df: pd.DataFrame | None = None) -> dict:
     """
-    Fetch CNXSMALLCAP and NIFTYSMLCAP250 index data from yfinance,
-    compute EMA10 / EMA20, and return a sentiment dict with red/green signals.
-    """
-    import yfinance as yf
+    Fetch NIFTY SMALLCAP 250 index historical data and compute 10-EMA.
 
-    # Multiple fallback tickers per index — Yahoo Finance changes these silently
-    TICKERS = {
-        "cnxsmallcap": {
-            "name": "CNX Smallcap",
-            "candidates": ["^CNXSC", "NIFTYSMLCAP250.NS"]
-        },
-        "niftysmlcap250": {
-            "name": "Nifty Smallcap 250",
-            "candidates": ["^NSMIDCP250", "NIFTYSMLCAP250.NS"],
-        },
-    }
+    Primary source: jugaad-data (niftyindices.com) — reliable on GitHub Actions.
+    Fallback:       yfinance with multiple ticker candidates.
+
+    Returns a sentiment dict with close price, EMA10, above/below signals.
+    """
+    import datetime as dt
+    import logging
+    logger = logging.getLogger(__name__)
 
     result: dict = {
-        "cnxsmallcap":    {"close": None, "ema10": None, "ema20": None,
-                           "above_ema10": None, "above_ema20": None, "name": "CNX Smallcap"},
-        "niftysmlcap250": {"close": None, "ema10": None, "ema20": None,
-                           "above_ema10": None, "above_ema20": None, "name": "Nifty Smallcap 250"},
+        "cnxsmallcap": {
+            "close": None, "ema10": None, "ema20": None,
+            "above_ema10": None, "above_ema20": None,
+            "name": "NIFTY Smallcap 250",
+            "pct_above_ema10": None, "pct_above_ema20": None,
+            "count": 0,
+        },
+        "niftysmlcap250": {
+            "close": None, "ema10": None, "ema20": None,
+            "above_ema10": None, "above_ema20": None,
+            "name": "NIFTY Smallcap 250 (10 EMA)",
+            "pct_above_ema10": None, "pct_above_ema20": None,
+            "count": 0,
+        },
         "overall": "unavailable",
     }
 
-    ok_count   = 0
-    bull_count = 0
+    close_series: pd.Series | None = None
 
-    for key, meta in TICKERS.items():
-        close_series = None
+    # ── 1. Try jugaad-data (niftyindices.com) ────────────────────────────────
+    try:
+        from jugaad_data.nse import index_raw
+        to_date   = dt.date.today()
+        from_date = to_date - dt.timedelta(days=90)  # ~3 months for reliable EMA
+        records   = index_raw(
+            symbol    = "NIFTY SMALLCAP 250",
+            from_date = from_date,
+            to_date   = to_date,
+        )
+        if records:
+            tmp = pd.DataFrame(records)
+            # jugaad-data returns columns like 'CLOSE', 'HistoricalDate'
+            date_col  = next((c for c in tmp.columns if "date" in c.lower()), None)
+            close_col = next((c for c in tmp.columns if "close" in c.lower()), None)
+            if date_col and close_col:
+                tmp[date_col]  = pd.to_datetime(tmp[date_col], dayfirst=True, errors="coerce")
+                tmp[close_col] = pd.to_numeric(tmp[close_col].astype(str).str.replace(",", ""), errors="coerce")
+                tmp = tmp.dropna(subset=[date_col, close_col]).sort_values(date_col)
+                if len(tmp) >= 11:
+                    close_series = tmp.set_index(date_col)[close_col].astype(float)
+                    logger.info("[Market Sentiment] jugaad-data OK — %d rows", len(close_series))
+    except Exception as exc:
+        logger.warning("[Market Sentiment] jugaad-data failed: %s", exc)
 
-        for ticker in meta["candidates"]:
+    # ── 2. Fallback: yfinance ─────────────────────────────────────────────────
+    if close_series is None:
+        import yfinance as yf
+        # Correct Yahoo Finance tickers for Nifty Smallcap 250 (try multiple)
+        candidates = ["^CNXSC", "^NSMIDCP250", "NIFTY_SMALLCAP_250.NS"]
+        for ticker in candidates:
             try:
                 raw = yf.download(
-                    ticker, period="60d", interval="1d",
-                    progress=False, auto_adjust=True
+                    ticker, period="90d", interval="1d",
+                    progress=False, auto_adjust=True, threads=False,
                 )
-                if raw.empty or len(raw) < 21:
+                if raw is None or raw.empty:
                     continue
-
-                # ── Fix MultiIndex columns (yfinance >= 0.2.38) ──────────────
                 if isinstance(raw.columns, pd.MultiIndex):
                     raw.columns = raw.columns.get_level_values(0)
+                col = raw["Close"].dropna()
+                if isinstance(col, pd.DataFrame):
+                    col = col.iloc[:, 0]
+                if len(col) >= 11:
+                    close_series = col.astype(float)
+                    logger.info("[Market Sentiment] yfinance %s OK — %d rows", ticker, len(col))
+                    break
+            except Exception as exc:
+                logger.warning("[Market Sentiment] yfinance %s failed: %s", ticker, exc)
 
-                close_col = raw["Close"].dropna()
+    if close_series is None or len(close_series) < 11:
+        logger.warning("[Market Sentiment] No data available — showing N/A")
+        return result
 
-                # After flattening, if downloading one ticker we may still get
-                # a DataFrame with one column — squeeze to Series
-                if isinstance(close_col, pd.DataFrame):
-                    close_col = close_col.iloc[:, 0]
+    # ── 3. Compute EMA10 and EMA20 ────────────────────────────────────────────
+    last  = float(close_series.iloc[-1])
+    ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
+    ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
 
-                if len(close_col) < 21:
-                    continue
+    above10 = last > ema10
+    above20 = last > ema20
 
-                close_series = close_col.astype(float)
-                print(f"[Market Sentiment] {ticker} OK — {len(close_series)} rows")
-                break  # got valid data, stop trying fallbacks
+    common = {
+        "close":      round(last, 2),
+        "ema10":      round(ema10, 2),
+        "ema20":      round(ema20, 2),
+        "above_ema10": above10,
+        "above_ema20": above20,
+        "count":      len(close_series),
+    }
+    result["cnxsmallcap"].update(common)
+    result["niftysmlcap250"].update(common)
 
-            except Exception as e:
-                print(f"[Market Sentiment] {ticker} failed: {e}")
-
-        if close_series is None:
-            print(f"[Market Sentiment] All tickers failed for {meta['name']}")
-            continue
-
-        last  = float(close_series.iloc[-1])
-        ema10 = float(close_series.ewm(span=10, adjust=False).mean().iloc[-1])
-        ema20 = float(close_series.ewm(span=20, adjust=False).mean().iloc[-1])
-
-        above10 = last > ema10
-        above20 = last > ema20
-
-        result[key].update({
-            "close":       round(last,  2),
-            "ema10":       round(ema10, 2),
-            "ema20":       round(ema20, 2),
-            "above_ema10": above10,
-            "above_ema20": above20,
-        })
-
-        ok_count += 1
-        if above10 and above20:
-            bull_count += 1
-        elif above10 or above20:
-            bull_count += 0.5
-
-    if ok_count == 0:
-        result["overall"] = "unavailable"
-    elif bull_count >= ok_count * 0.75:
+    # Overall signal based on EMA10 (primary) + EMA20 (secondary)
+    if above10 and above20:
         result["overall"] = "bullish"
-    elif bull_count <= ok_count * 0.25:
+    elif not above10 and not above20:
         result["overall"] = "bearish"
     else:
         result["overall"] = "mixed"
 
     return result
+
 
 # ── Helper predicates ─────────────────────────────────────────────────────────
 

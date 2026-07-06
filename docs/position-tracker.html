@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Position Tracker — Momentum Alpha</title>
+<title>Position Tracker — Alpha Momentum</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/tracker.css"/>
 <script type="module" src="js/position-tracker.js"></script>
@@ -12,10 +12,10 @@
 <div class="topbar"></div>
 
 <header>
-  <div class="brand-name-idx"><div class="brand-dot"></div>Momentum Alpha</div>
+  <div class="brand-name-idx"><div class="brand-dot"></div>Alpha Momentum</div>
   <div class="header-row">
     <div class="header-titles">
-      <h1>Position Tracker</h1>
+      <h1>📊 Position Tracker</h1>
       <p>Live P&amp;L % and R-multiple on every open position</p>
     </div>
     <div class="top-buttons">
@@ -23,57 +23,156 @@
         <a href="index.html" class="btn-link">← Scanner</a>
         <a href="position-size.html" class="btn-link blue">Position Size Calculator →</a>
       </div>
-      <button id="loginBtn" class="btn-link green">Login with Google</button>
+      <button id="loginBtn" class="btn-link navy">Login with Google</button>
     </div>
   </div>
 </header>
 
 <div class="container">
 
-  <section class="summary">
-    <div class="card">
-      <h3>Open Positions</h3>
-      <span id="openCount">0</span>
-    </div>
-    <div class="card">
-      <h3>Portfolio Heat</h3>
-      <span id="heat">0%</span>
-    </div>
-    <div class="card">
-      <h3>Avg R</h3>
-      <span id="avgR">0R</span>
-    </div>
-    <div class="card">
-      <h3>Winners / Losers</h3>
-      <span id="winLoss">0 / 0</span>
-    </div>
+  <section class="panel" id="settingsPanel">
+    <h2 class="section-title"><span class="dot"></span>Your Portfolio Settings</h2>
+    <p id="settingsDisplay" class="login-status">Login to see your saved portfolio size &amp; risk settings.</p>
   </section>
 
-  <section class="panel">
-    <h2 class="section-title">Open Positions</h2>
-    <p style="font-family:var(--mono);font-size:.75rem;color:var(--subtle);margin-bottom:.75rem">
-      Current Price refreshes automatically every 5 minutes via a scheduled server job. Use the override box for an instant correction in between.
-    </p>
-    <div class="tbl-wrap">
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Owner</th>
-            <th>Entry</th>
-            <th>SL</th>
-            <th>Qty</th>
-            <th>Current Price</th>
-            <th>P&amp;L %</th>
-            <th>R Multiple</th>
-            <th>Delete</th>
-          </tr>
-        </thead>
-        <tbody id="positionsTable"></tbody>
-      </table>
-    </div>
-  </section>
+  <div class="page-tabs">
+    <button id="tabOpenBtn" class="page-tab active">📈 Open Positions</button>
+    <button id="tabBookedBtn" class="page-tab">📒 Booked Positions</button>
+  </div>
 
+  <!-- ══════════════════ OPEN POSITIONS ══════════════════ -->
+  <div id="openPanel">
+
+    <section class="summary">
+      <div class="card">
+        <h3>Open Positions</h3>
+        <span id="openCount">0</span>
+      </div>
+      <div class="card">
+        <h3>Avg R</h3>
+        <span id="avgR">0R</span>
+      </div>
+      <div class="card">
+        <h3>Winners / Losers</h3>
+        <span id="winLoss">0 / 0</span>
+      </div>
+      <div class="card">
+        <h3>Total Portfolio Impact</h3>
+        <span id="totalImpact">₹0</span>
+      </div>
+      <div class="card">
+        <h3>Total Impact %</h3>
+        <span id="totalImpactPct">0%</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title"><span class="dot"></span>Open Positions</h2>
+      <p class="login-status" style="margin-top:0;margin-bottom:.85rem;">
+        Current Price refreshes automatically every 5 minutes via a scheduled server job. Use the override box for an instant correction in between.
+        Click ✅ when you exit a trade to log it permanently in your Booked Positions journal.
+      </p>
+      <div class="tbl-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Date Bought</th>
+              <th>Entry</th>
+              <th>SL</th>
+              <th>Risk %</th>
+              <th>Qty</th>
+              <th>Current Price</th>
+              <th>P&amp;L %</th>
+              <th>R Multiple</th>
+              <th>Portfolio Impact</th>
+              <th>Book</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody id="positionsTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══════════════════ BOOKED POSITIONS ══════════════════ -->
+  <div id="bookedPanel" style="display:none">
+
+    <section class="summary">
+      <div class="card">
+        <h3>Booked Trades</h3>
+        <span id="bookedCount">0</span>
+      </div>
+      <div class="card">
+        <h3>Win Rate</h3>
+        <span id="bookedWinRate">0%</span>
+      </div>
+      <div class="card">
+        <h3>Avg R</h3>
+        <span id="bookedAvgR">0R</span>
+      </div>
+      <div class="card">
+        <h3>Total Realised P&amp;L</h3>
+        <span id="bookedTotalPnl">₹0</span>
+      </div>
+      <div class="card">
+        <h3>Total Realised %</h3>
+        <span id="bookedTotalPnlPct">0%</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title"><span class="dot"></span>Trade Journal</h2>
+      <p class="login-status" style="margin-top:0;margin-bottom:.85rem;">
+        Every closed trade, permanently logged — your record for reviewing what worked, what didn't, and getting better one trade at a time.
+      </p>
+      <div class="tbl-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Date Bought</th>
+              <th>Date Sold</th>
+              <th>Held</th>
+              <th>Entry</th>
+              <th>SL</th>
+              <th>Exit Price</th>
+              <th>Risk %</th>
+              <th>Qty</th>
+              <th>P&amp;L %</th>
+              <th>R Multiple</th>
+              <th>Portfolio Impact</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody id="bookedTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════ BOOK POSITION MODAL ══════════════════ -->
+<div id="bookModalOverlay" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <h2 class="section-title"><span class="dot"></span>Book <span id="bookModalSymbol">—</span></h2>
+    <div class="field" style="margin-bottom:1rem;">
+      <label class="field-label" for="bookExitPrice">Exit Price</label>
+      <input id="bookExitPrice" type="number" placeholder="e.g. 3950"/>
+    </div>
+    <div class="field" style="margin-bottom:1.4rem;">
+      <label class="field-label" for="bookDateSold">Date Sold</label>
+      <input id="bookDateSold" type="date"/>
+    </div>
+    <div style="display:flex;gap:.6rem;justify-content:flex-end;">
+      <button id="bookModalCancel" class="btn-link">Cancel</button>
+      <button id="bookModalConfirm" class="btn-link green">✅ Confirm &amp; Book</button>
+    </div>
+  </div>
 </div>
 
 <footer>

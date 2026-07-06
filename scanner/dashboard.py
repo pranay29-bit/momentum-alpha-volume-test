@@ -18,7 +18,10 @@ New-stock tracking:
 
 from __future__ import annotations
 
+import html
+import json
 import logging
+from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 
@@ -67,19 +70,25 @@ _GOOGLE_FONTS = (
 _BASE_CSS = """
 :root {
   /* Surfaces */
-  --bg:         #f7f8fc;
+  --bg:         #ffffff;
   --surface:    #ffffff;
-  --surface2:   #f1f3f9;
-  --surface3:   #e8ebf5;
-  --border:     #e2e6f0;
-  --border2:    #ccd1e4;
+  --surface-2:  #fbfbfe;
+  --surface2:   #fbfbfe;
+  --surface3:   #f1f3f9;
+  --border:     #e5e8f0;
+  --border-2:   #d4d9e8;
+  --border2:    #d4d9e8;
 
   /* Text */
-  --text:       #0f1629;
-  --muted:      #5a6282;
-  --subtle:     #8b93b5;
+  --text:       #0d1426;
+  --muted:      #5b6178;
+  --subtle:     #9499b3;
 
   /* Brand accents */
+  --navy:       #0f1b3d;
+  --navy-2:     #16234a;
+  --navy-lt:    #eef1f8;
+  --navy-mid:   #c9d0e3;
   --indigo:     #4f46e5;
   --indigo-lt:  #eef0fd;
   --indigo-mid: #c7d2fe;
@@ -89,11 +98,12 @@ _BASE_CSS = """
   --blue:       #2563eb;
   --blue-lt:    #eff6ff;
   --blue-mid:   #bfdbfe;
-  --amber:      #d97706;
+  --amber:      #b45309;
   --amber-lt:   #fffbeb;
   --amber-mid:  #fde68a;
   --red:        #dc2626;
   --red-lt:     #fef2f2;
+  --red-mid:    #fca5a5;
   --violet:     #7c3aed;
   --violet-lt:  #f5f3ff;
   --violet-mid: #ddd6fe;
@@ -104,13 +114,17 @@ _BASE_CSS = """
   --new-text:   #a21caf;
   --new-row:    #fdf4ff;
 
-  /* Type */
-  --sans:  'Outfit', system-ui, sans-serif;
-  --mono:  'DM Mono', 'Courier New', monospace;
+  /* Type — identical stack used site-wide (homepage, all dashboards, tools) */
+  --sans:  'Outfit', system-ui, -apple-system, sans-serif;
+  --mono:  'DM Mono', 'SF Mono', 'Courier New', monospace;
 
   /* Radii */
   --r:   8px;
   --rl:  12px;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.04);
+  --shadow-md: 0 4px 16px -4px rgba(15,23,42,.08), 0 1px 3px rgba(15,23,42,.04);
   --rxl: 16px;
 }
 
@@ -174,6 +188,33 @@ header h1 {
   margin-top: .15rem;
 }
 .badge-row { display: flex; gap: .45rem; margin-top: .5rem; flex-wrap: wrap; }
+
+/* ── Shared cross-page nav bar (identical component on every page) ── */
+.site-nav {
+  display: flex; flex-wrap: wrap; gap: .5rem;
+  padding: .75rem 2.5rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.btn-link {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .32rem .9rem; border-radius: 999px;
+  font-family: var(--mono); font-size: .72rem; font-weight: 600;
+  background: var(--indigo-lt); border: 1px solid var(--indigo-mid); color: var(--indigo);
+  text-decoration: none; transition: background .14s, box-shadow .14s; letter-spacing: .03em;
+}
+.btn-link:hover { background: #dde2fb; }
+.btn-link.green   { background: var(--emerald-lt); border-color: var(--emerald-mid); color: var(--emerald); }
+.btn-link.green:hover   { background: #d7f8ea; }
+.btn-link.blue    { background: var(--blue-lt);    border-color: var(--blue-mid);    color: var(--blue); }
+.btn-link.blue:hover    { background: #dee9fd; }
+.btn-link.amber   { background: var(--amber-lt);   border-color: var(--amber-mid);   color: var(--amber); }
+.btn-link.amber:hover   { background: #fef3c7; }
+.btn-link.violet  { background: var(--violet-lt);  border-color: var(--violet-mid);  color: var(--violet); }
+.btn-link.violet:hover  { background: #ede7fd; }
+.btn-link.navy    { background: var(--navy-lt, #eef1f8); border-color: var(--navy-mid, #c9d0e3); color: var(--navy); }
+.btn-link.navy:hover    { background: #e2e6f2; }
+.btn-link.is-active { box-shadow: 0 0 0 1px currentColor inset; font-weight: 700; }
 .hdr-badge {
   font-size: .64rem;
   font-weight: 600;
@@ -494,6 +535,7 @@ table { min-width: 640px; }
     flex-direction: column;
     align-items: stretch;
   }
+  .site-nav { padding: .65rem 1.1rem; }
   .date-pill { align-self: flex-start; margin-top: .6rem; }
 
   .csv-bar { padding: .55rem 1.1rem; }
@@ -573,7 +615,37 @@ Chart.defaults.color       = "#5a6282";
 """
 
 
-def _html_head(title: str, accent1: str, accent2: str) -> str:
+def _site_nav(active: str, date_str: str) -> str:
+    """
+    Shared cross-page nav bar — identical on every generated dashboard page
+    (and mirrored by the nav-tabs on the tool pages) so a visitor can jump
+    to Home or any other dashboard from wherever they land.
+
+    `active` is one of: "momentum", "elite", "volume", "rocket".
+    `date_str` is the scan date in YYYYMMDD form (dashboards for the same
+    date live side-by-side in the same folder, so links are relative).
+    """
+    def _link(key, href, cls, label):
+        active_cls = " is-active" if key == active else ""
+        return f'<a href="{href}" class="btn-link {cls}{active_cls}">{label}</a>'
+
+    links = "".join([
+        _link("momentum", f"dashboard_{date_str}.html",        "indigo",  "📊 Momentum"),
+        _link("elite",    f"elite_dashboard_{date_str}.html",   "green",   "⚡ Elite"),
+        _link("volume",   f"volume_dashboard_{date_str}.html",  "blue",    "🔵 Volume"),
+        _link("rocket",   f"rocket_dashboard_{date_str}.html",  "amber",   "🚀 Rocket"),
+    ])
+    return f"""
+<nav class="site-nav">
+  <a href="../index.html" class="btn-link navy">🏠 Home</a>
+  {links}
+  <a href="../position-size.html" class="btn-link violet">📐 Position Size</a>
+  <a href="../position-tracker.html" class="btn-link navy">📈 Position Tracker</a>
+</nav>"""
+
+
+def _html_head(title: str, accent1: str, accent2: str, active: str | None = None, date_str: str | None = None) -> str:
+    nav_html = _site_nav(active, date_str) if (active and date_str) else ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -589,6 +661,7 @@ def _html_head(title: str, accent1: str, accent2: str) -> str:
 </head>
 <body>
 <div class="topbar"></div>
+{nav_html}
 """
 
 
@@ -702,15 +775,15 @@ def build_passing_dashboard(
     n_new = sum(1 for _, r in passing.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
 
-    html  = _html_head(f"Momentum Alpha — Passing Stocks — {date_display}",
-                       "var(--indigo)", "var(--blue)")
+    html  = _html_head(f"Alpha Momentum — Passing Stocks — {date_display}",
+                       "var(--indigo)", "var(--blue)", active="momentum", date_str=date_str)
     html += _csv_bar_passing(date_str)
     html += f"""
 <header>
   <div class="hdr-left">
     <div class="brand">
       <div class="brand-dot" style="background:var(--indigo)"></div>
-      <span class="brand-name">Momentum Alpha · NSE Scanner</span>
+      <span class="brand-name">Alpha Momentum · NSE Scanner</span>
     </div>
     <h1>Minervini Trend Template</h1>
     <p class="hdr-sub">All 8 Minervini conditions passing · NSE India · {date_display}</p>
@@ -943,15 +1016,15 @@ def build_passing_ema10_dashboard(
     n_new = sum(1 for _, r in df.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
 
-    html  = _html_head(f"Momentum Alpha — Elite Stocks — {date_display}",
-                       "var(--emerald)", "var(--blue)")
+    html  = _html_head(f"Alpha Momentum — Elite Stocks — {date_display}",
+                       "var(--emerald)", "var(--blue)", active="elite", date_str=date_str)
     html += _csv_bar_elite(date_str)
     html += f"""
 <header>
   <div class="hdr-left">
     <div class="brand">
       <div class="brand-dot" style="background:var(--emerald)"></div>
-      <span class="brand-name">Momentum Alpha · Elite Filter</span>
+      <span class="brand-name">Alpha Momentum · Elite Filter</span>
     </div>
     <h1>Passing Stocks Above EMA10</h1>
     <p class="hdr-sub">All 8 Minervini conditions + Close &gt; 10-period EMA · NSE India · {date_display}</p>
@@ -1175,14 +1248,14 @@ def build_volume_action_dashboard(
     n_new = sum(1 for _, r in sorted_df.iterrows()
                 if str(r.get("symbol","")).replace(".NS","") not in known)
 
-    html  = _html_head(f"Momentum Alpha — Volume Action — {date_display}",
-                       "var(--blue)", "var(--indigo)")
+    html  = _html_head(f"Alpha Momentum — Volume Action — {date_display}",
+                       "var(--blue)", "var(--indigo)", active="volume", date_str=date_str)
     html += f"""
 <header>
   <div class="hdr-left">
     <div class="brand">
       <div class="brand-dot" style="background:var(--blue)"></div>
-      <span class="brand-name">Momentum Alpha · Volume Action</span>
+      <span class="brand-name">Alpha Momentum · Volume Action</span>
     </div>
     <h1>Pocket Pivot / Blue Volume</h1>
     <p class="hdr-sub">Institutional accumulation signals · NSE India · {date_display}</p>
@@ -1335,14 +1408,14 @@ def build_rocket_dashboard(
                 if str(r.get("symbol","")).replace(".NS","") not in known) if n_rocket > 0 else 0
     hit_rate = f"{100*n_rocket/n_passing:.1f}%" if n_passing > 0 else "N/A"
 
-    html  = _html_head(f"Momentum Alpha — Rocket Stocks — {date_display}",
-                       "var(--amber)", "var(--red)")
+    html  = _html_head(f"Alpha Momentum — Rocket Stocks — {date_display}",
+                       "var(--amber)", "var(--red)", active="rocket", date_str=date_str)
     html += f"""
 <header>
   <div class="hdr-left">
     <div class="brand">
       <div class="brand-dot" style="background:var(--amber)"></div>
-      <span class="brand-name">Momentum Alpha · Rocket Stocks</span>
+      <span class="brand-name">Alpha Momentum · Rocket Stocks</span>
     </div>
     <h1>Rocket Stocks</h1>
     <p class="hdr-sub">All 8 Minervini conditions + Inside Bar coiling setup · NSE India · {date_display}</p>
@@ -1439,17 +1512,17 @@ def build_main_index(
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Momentum Alpha Dashboard</title>
+<title>Alpha Momentum Dashboard</title>
 <link href="{_GOOGLE_FONTS}" rel="stylesheet"/>
 <style>
 :root {{
-  --bg:#f7f8fc; --surface:#fff; --border:#e2e6f0;
-  --text:#0f1629; --muted:#5a6282;
-  --sans:'Outfit',system-ui,sans-serif; --mono:'DM Mono',monospace;
+  --bg:#ffffff; --surface:#fff; --border:#e5e8f0;
+  --text:#0d1426; --muted:#5b6178;
+  --sans:'Outfit',system-ui,-apple-system,sans-serif; --mono:'DM Mono','SF Mono','Courier New',monospace;
 }}
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 body{{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:2.5rem}}
-.topbar{{height:3px;background:linear-gradient(90deg,#4f46e5,#06b6d4);margin:-2.5rem -2.5rem 2rem;}}
+.topbar{{height:3px;background:linear-gradient(90deg,#0f1b3d 0%,#4f46e5 55%,#059669 100%);margin:-2.5rem -2.5rem 2rem;}}
 h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}}
 .sub{{color:var(--muted);font-size:.85rem;margin-bottom:2rem;font-family:var(--mono)}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}}
@@ -1475,7 +1548,7 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
 </head>
 <body>
 <div class="topbar"></div>
-<h1>Momentum Alpha</h1>
+<h1>Alpha Momentum</h1>
 <p class="sub">// NSE Minervini Trend Scanner · India</p>
 <div class="grid">
   <div class="card" style="--c:#4f46e5">
@@ -1515,3 +1588,346 @@ h1{{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.35rem}
 
     Path(out_path).write_text(html, encoding="utf-8")
     logger.info("Main index page → %s", out_path)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  HOMEPAGE WIDGET — Industry Group → Industry → Stock (nested accordion)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Renders an interactive, self-contained fragment (CSS + markup + a single
+# tiny shared toggle script) meant to be embedded into docs/index.html (the
+# GitHub Pages landing page). For TODAY's Momentum (8-condition passing)
+# universe it shows:
+#
+#   • Every Industry Group, sorted descending by stock count, as an
+#     expand/collapse row — exactly the same accordion pattern already used
+#     by the "Scan History" month groups further down the page.
+#   • Expanding a group reveals its Industries, sorted descending by stock
+#     count, each its own (nested) expand/collapse row.
+#   • Expanding an industry reveals the stock list (symbol / close / RS),
+#     where clicking a symbol opens that stock on TradingView.
+#
+# Everything is rendered server-side (no client-side data/JSON, no fetch) —
+# the whole tree is plain HTML with CSS max-height transitions, just like the
+# month-wise history section, so opening/closing feels identical site-wide.
+
+
+def _indv_stock_row(rec: dict) -> str:
+    close_s = f"₹{rec['c']:,.2f}" if rec.get("c") is not None else "N/A"
+    rs_s    = f"{rec['r']:.1f}" if rec.get("r") is not None else "N/A"
+    tv_link = _tv_link(rec["s"] + ".NS")
+    sym_esc = html.escape(rec["s"])
+    return f"""
+        <tr>
+          <td><a class="indv-sym" href="{tv_link}" target="_blank" rel="noopener">{sym_esc} &#8599;</a></td>
+          <td class="r" style="font-family:var(--mono)">{close_s}</td>
+          <td class="r"><span class="indv-pill">{rs_s}</span></td>
+        </tr>"""
+
+
+def build_industry_drilldown(
+    passing: "pd.DataFrame",
+    date_display: str,
+    dashboard_link: str | None = None,
+) -> str:
+    """
+    Build the homepage "Industry Group → Industry → Stock" nested-accordion
+    widget from TODAY's Momentum (8-condition passing) stocks.
+
+    Returns a self-contained HTML fragment (markup + scoped CSS + a tiny
+    shared toggle script) ready to be dropped into docs/index.html. Visually
+    and interactively it mirrors the "Scan History" month-wise accordion
+    already on that page — same expand/collapse mechanics, same fonts and
+    color tokens, same pill/sym-tag components — so it reads as one more
+    section of the same product rather than a bolted-on widget.
+    """
+    records: list[dict] = []
+    if passing is not None and not passing.empty:
+        for _, row in passing.iterrows():
+            sym = str(row.get("symbol", "")).replace(".NS", "").strip()
+            if not sym:
+                continue
+            grp   = str(row.get("industry_group") or "").strip() or "Unclassified"
+            ind   = str(row.get("industry") or "").strip() or "Unclassified"
+            close = row.get("close", np.nan)
+            rs    = row.get("rs_percentile", np.nan)
+            records.append({
+                "s": sym,
+                "g": grp,
+                "i": ind,
+                "c": round(float(close), 2) if _safe(close) else None,
+                "r": round(float(rs), 1) if _safe(rs) else None,
+            })
+
+    n_stocks = len(records)
+
+    dash_btn = (
+        f'<a href="{dashboard_link}" class="btn-link green">📊 Full Momentum Dashboard</a>'
+        if dashboard_link else ""
+    )
+
+    if n_stocks == 0:
+        subtitle = f"No passing stocks yet for {date_display}."
+        return f"""
+<div class="indv-section" id="indv-section">
+  <div class="indv-titlebar">
+    <div class="indv-titlewrap">
+      <div class="indv-eyebrow"><span class="indv-dot"></span>MOMENTUM UNIVERSE</div>
+      <h2 class="indv-heading">Industry Breakdown</h2>
+      <p class="indv-sub">{subtitle}</p>
+    </div>
+    {dash_btn}
+  </div>
+  <div class="indv-card">
+    <div class="indv-empty">No stocks are currently passing the Momentum scan &mdash; check back after the next run.</div>
+  </div>
+</div>
+{_INDV_STYLE}
+{_INDV_SCRIPT}
+"""
+
+    # ── Group stocks by Industry Group → Industry ─────────────────────────────
+    groups: "OrderedDict[str, list[dict]]" = OrderedDict()
+    for r in records:
+        groups.setdefault(r["g"], []).append(r)
+    group_items = sorted(groups.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    n_groups = len(group_items)
+    top_group, top_group_recs = group_items[0]
+    top_group_disp = top_group if len(top_group) <= 26 else top_group[:24] + "…"
+
+    groups_html_parts: list[str] = []
+    for idx, (grp, recs) in enumerate(group_items):
+        industries: "OrderedDict[str, list[dict]]" = OrderedDict()
+        for r in recs:
+            industries.setdefault(r["i"], []).append(r)
+        industry_items = sorted(industries.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+
+        industries_html_parts: list[str] = []
+        for jdx, (ind, irecs) in enumerate(industry_items):
+            irecs_sorted = sorted(
+                irecs,
+                key=lambda d: (-(d["r"] if d["r"] is not None else -1.0), d["s"]),
+            )
+            rows = "".join(_indv_stock_row(d) for d in irecs_sorted)
+            ind_esc = html.escape(ind)
+            industries_html_parts.append(f"""
+      <div class="indv-ind">
+        <button class="indv-ind-acc" onclick="toggleAccordion(this)" aria-expanded="false">
+          <span class="indv-ind-rank">{jdx + 1:02d}</span>
+          <span class="indv-ind-label">{ind_esc}</span>
+          <span class="indv-ind-meta">{len(irecs)} stock{'s' if len(irecs) != 1 else ''}</span>
+          <span class="indv-ind-chev">&#8963;</span>
+        </button>
+        <div class="indv-ind-body">
+          <div class="indv-table-wrap">
+            <table class="indv-table">
+              <thead><tr><th>Symbol</th><th class="r">Close ₹</th><th class="r">RS %ile</th></tr></thead>
+              <tbody>{rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>""")
+
+        is_first  = idx == 0
+        grp_esc   = html.escape(grp)
+        groups_html_parts.append(f"""
+  <div class="indv-group">
+    <button class="indv-acc" onclick="toggleAccordion(this)" aria-expanded="{'true' if is_first else 'false'}">
+      <span class="indv-acc-rank">{idx + 1:02d}</span>
+      <span class="indv-acc-label">{grp_esc}</span>
+      <span class="indv-acc-meta">{len(recs)} stock{'s' if len(recs) != 1 else ''}</span>
+      <span class="indv-acc-chevron">&#8963;</span>
+    </button>
+    <div class="indv-body{' open' if is_first else ''}">
+      <div class="indv-industries">{''.join(industries_html_parts)}
+      </div>
+    </div>
+  </div>""")
+
+    subtitle = (
+        f"{n_stocks} stock{'s' if n_stocks != 1 else ''} passing today&rsquo;s Minervini scan "
+        f"across {n_groups} industry group{'s' if n_groups != 1 else ''} "
+        f"&middot; click a group to expand it, click a symbol to open TradingView"
+    )
+
+    return f"""
+<div class="indv-section" id="indv-section">
+  <div class="indv-titlebar">
+    <div class="indv-titlewrap">
+      <div class="indv-eyebrow"><span class="indv-dot"></span>MOMENTUM UNIVERSE</div>
+      <h2 class="indv-heading">Industry Breakdown</h2>
+      <p class="indv-sub">{subtitle}</p>
+    </div>
+    {dash_btn}
+  </div>
+
+  <div class="indv-card">
+    <div class="indv-kpis">
+      <div class="indv-kpi" style="--accent:var(--indigo)">
+        <div class="indv-kpi-lbl">Stocks Passing</div>
+        <div class="indv-kpi-val">{n_stocks}</div>
+        <div class="indv-kpi-hint">{date_display}</div>
+      </div>
+      <div class="indv-kpi" style="--accent:var(--blue)">
+        <div class="indv-kpi-lbl">Industry Groups</div>
+        <div class="indv-kpi-val">{n_groups}</div>
+        <div class="indv-kpi-hint">represented today</div>
+      </div>
+      <div class="indv-kpi" style="--accent:var(--emerald)">
+        <div class="indv-kpi-lbl">Top Group</div>
+        <div class="indv-kpi-val" title="{html.escape(top_group)}">{html.escape(top_group_disp)}</div>
+        <div class="indv-kpi-hint">{len(top_group_recs)} stock{'s' if len(top_group_recs) != 1 else ''}</div>
+      </div>
+    </div>
+    <div class="indv-body-outer">
+      <div class="indv-groups">{''.join(groups_html_parts)}
+      </div>
+    </div>
+  </div>
+</div>
+{_INDV_STYLE}
+{_INDV_SCRIPT}
+"""
+
+
+_INDV_STYLE = """
+<style>
+.indv-section{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}
+.indv-titlebar{display:flex;justify-content:space-between;align-items:flex-start;gap:1.25rem;flex-wrap:wrap;margin-bottom:1rem;}
+.indv-titlewrap{min-width:220px;flex:1;}
+.indv-eyebrow{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.62rem;
+              font-weight:700;letter-spacing:.14em;color:var(--indigo);margin-bottom:.4rem;}
+.indv-dot{width:6px;height:6px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 3px var(--emerald-lt);}
+.indv-heading{font-family:var(--sans);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;
+              color:var(--text);margin-bottom:.3rem;}
+.indv-sub{font-family:var(--sans);font-size:.8rem;color:var(--muted);max-width:640px;line-height:1.55;}
+
+.indv-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+           box-shadow:var(--shadow-sm);overflow:hidden;}
+
+.indv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border-bottom:1px solid var(--border);}
+.indv-kpi{padding:.95rem 1.35rem;border-right:1px solid var(--border);position:relative;min-width:0;}
+.indv-kpi:last-child{border-right:none;}
+.indv-kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);}
+.indv-kpi-lbl{font-family:var(--mono);font-size:.6rem;font-weight:600;text-transform:uppercase;
+              letter-spacing:.1em;color:var(--muted);margin-bottom:.35rem;}
+.indv-kpi-val{font-family:var(--sans);font-size:1.15rem;font-weight:700;letter-spacing:-.02em;
+              color:var(--accent);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.indv-kpi-hint{font-family:var(--mono);font-size:.64rem;color:var(--subtle);margin-top:.25rem;}
+
+.indv-body-outer{padding:1.25rem 1.4rem 1.4rem;}
+.indv-empty{text-align:center;padding:2.4rem 1rem;color:var(--muted);font-size:.83rem;font-family:var(--mono);}
+
+/* ── Top-level: Industry Group accordion (mirrors .month-accordion) ── */
+.indv-groups{display:flex;flex-direction:column;gap:.7rem;}
+.indv-acc{
+  width:100%;display:flex;align-items:center;gap:.75rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:.85rem 1.2rem;cursor:pointer;
+  font-family:var(--sans);font-size:.92rem;font-weight:600;color:var(--text);
+  letter-spacing:-.01em;text-align:left;
+  transition:background .15s,box-shadow .15s;
+  box-shadow:var(--shadow-sm);
+}
+.indv-acc:hover{background:var(--surface-2,#fbfbfe);box-shadow:var(--shadow-md);}
+.indv-acc[aria-expanded="true"]{
+  border-bottom-left-radius:0;border-bottom-right-radius:0;
+  border-bottom-color:transparent;
+  background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo);
+}
+.indv-acc-rank{flex-shrink:0;width:22px;height:22px;border-radius:6px;background:rgba(15,23,42,.05);
+               display:flex;align-items:center;justify-content:center;
+               font-family:var(--mono);font-size:.62rem;font-weight:700;}
+.indv-acc[aria-expanded="true"] .indv-acc-rank{background:rgba(255,255,255,.65);}
+.indv-acc-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.indv-acc-meta{font-family:var(--mono);font-size:.67rem;font-weight:500;color:var(--subtle);letter-spacing:.04em;white-space:nowrap;}
+.indv-acc[aria-expanded="true"] .indv-acc-meta{color:var(--indigo);opacity:.75;}
+.indv-acc-chevron{font-size:.8rem;transition:transform .3s cubic-bezier(.4,0,.2,1);display:inline-block;flex-shrink:0;}
+.indv-acc[aria-expanded="false"] .indv-acc-chevron{transform:rotate(180deg);}
+
+.indv-body{
+  overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .28s ease;
+  border:1px solid transparent;border-top:none;
+  border-bottom-left-radius:10px;border-bottom-right-radius:10px;
+}
+.indv-body.open{max-height:6000px;opacity:1;border-color:var(--indigo-mid);}
+.indv-industries{padding:.9rem 1.1rem 1.05rem;display:flex;flex-direction:column;gap:.55rem;background:var(--surface);}
+
+/* ── Nested: Industry accordion (same mechanics, smaller/indented) ── */
+.indv-ind{border-left:2px solid var(--indigo-mid);padding-left:.7rem;}
+.indv-ind-acc{
+  width:100%;display:flex;align-items:center;gap:.6rem;
+  background:var(--surface-2,#fbfbfe);border:1px solid var(--border);border-radius:8px;
+  padding:.6rem .9rem;cursor:pointer;
+  font-family:var(--sans);font-size:.82rem;font-weight:600;color:var(--text);
+  letter-spacing:-.005em;text-align:left;
+  transition:background .15s,box-shadow .15s;
+}
+.indv-ind-acc:hover{box-shadow:var(--shadow-sm);}
+.indv-ind-acc[aria-expanded="true"]{
+  background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo);
+  border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent;
+}
+.indv-ind-rank{flex-shrink:0;width:18px;height:18px;border-radius:5px;background:var(--border);
+               display:flex;align-items:center;justify-content:center;
+               font-family:var(--mono);font-size:.58rem;font-weight:700;color:var(--muted);}
+.indv-ind-acc[aria-expanded="true"] .indv-ind-rank{background:#fff;color:var(--indigo);}
+.indv-ind-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.indv-ind-meta{font-family:var(--mono);font-size:.63rem;color:var(--subtle);white-space:nowrap;}
+.indv-ind-acc[aria-expanded="true"] .indv-ind-meta{color:var(--indigo);opacity:.75;}
+.indv-ind-chev{font-size:.7rem;transition:transform .3s cubic-bezier(.4,0,.2,1);flex-shrink:0;}
+.indv-ind-acc[aria-expanded="false"] .indv-ind-chev{transform:rotate(180deg);}
+
+.indv-ind-body{
+  overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .34s cubic-bezier(.4,0,.2,1),opacity .24s ease;
+  border:1px solid transparent;border-top:none;
+  border-bottom-left-radius:8px;border-bottom-right-radius:8px;
+}
+.indv-ind-body.open{max-height:4000px;opacity:1;border-color:var(--indigo-mid);}
+
+/* ── Stock table (leaf level) ── */
+.indv-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.indv-table{width:100%;border-collapse:collapse;min-width:340px;background:var(--surface);}
+.indv-table thead th{font-family:var(--mono);font-size:.62rem;font-weight:700;text-transform:uppercase;
+                     letter-spacing:.1em;color:var(--subtle);padding:.65rem .9rem;text-align:left;
+                     background:var(--surface-2,#fbfbfe);border-bottom:1px solid var(--border);}
+.indv-table td{padding:.65rem .9rem;border-bottom:1px solid var(--border);font-size:.83rem;color:var(--text);}
+.indv-table tr:last-child td{border-bottom:none;}
+.indv-table tr:hover td{background:var(--indigo-lt);}
+th.r,td.r{text-align:right;}
+
+.indv-sym{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--mono);font-weight:500;
+          font-size:.72rem;padding:.2rem .6rem;border-radius:6px;letter-spacing:.05em;border:1px solid;
+          background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo);
+          text-decoration:none;transition:filter .12s;}
+.indv-sym:hover{filter:brightness(.93);}
+.indv-pill{display:inline-block;font-family:var(--mono);font-size:.7rem;font-weight:500;padding:.18rem .55rem;
+           border-radius:999px;border:1px solid;background:var(--amber-lt);border-color:var(--amber-mid);color:var(--amber);}
+
+@media (max-width:768px){
+  .indv-section{padding:0 1rem;}
+  .indv-heading{font-size:1.1rem;}
+  .indv-body-outer{padding:1rem 1.05rem 1.15rem;}
+  .indv-kpi{padding:.8rem 1rem;}
+  .indv-kpi-val{font-size:1.02rem;}
+  .indv-acc{padding:.75rem .95rem;font-size:.85rem;}
+  .indv-ind-acc{padding:.55rem .75rem;font-size:.78rem;}
+}
+</style>
+"""
+
+_INDV_SCRIPT = """
+<script>
+if (typeof window.toggleAccordion !== 'function') {
+  window.toggleAccordion = function(btn) {
+    var body = btn.nextElementSibling;
+    var open = body.classList.contains('open');
+    body.classList.toggle('open', !open);
+    btn.setAttribute('aria-expanded', String(!open));
+  };
+}
+</script>
+"""

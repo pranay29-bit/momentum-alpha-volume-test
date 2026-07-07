@@ -23,7 +23,7 @@ import pandas as pd
 from .config     import DOCS_DIR
 from .data_loader import download_all, load_symbols
 from .nse_client  import enrich_with_market_caps
-from .dashboard   import build_passing_dashboard, build_passing_ema10_dashboard, build_volume_action_dashboard, build_rocket_dashboard, build_industry_drilldown
+from .dashboard   import build_passing_dashboard, build_passing_ema10_dashboard, build_volume_action_dashboard, build_rocket_dashboard, build_industry_drilldown, build_minervini_ranking
 from .result_calendar import get_result_date
 from .indicators  import get_market_sentiment
 from . import net_new_highs as nnh
@@ -407,6 +407,18 @@ def _update_index(
         logger.warning("Could not build industry drill-down widget: %s", exc)
         industry_html = ""
 
+    # ── Build the Minervini Ranking leaderboard widget ─────────────────────────
+    ranked_csv_link = f"{today_date_display}/ranked_stocks_{today_slug}.csv"
+    try:
+        ranked_html = build_minervini_ranking(
+            passing if passing is not None else pd.DataFrame(),
+            today_date_display,
+            ranked_csv_link=ranked_csv_link,
+        )
+    except Exception as exc:
+        logger.warning("Could not build Minervini ranking widget: %s", exc)
+        ranked_html = ""
+
     # ── Build the "Dashboards" hub — every scanner + tool, arranged as cards ───
     if dated_dirs:
         _elite_link  = f"{today_date_display}/elite_dashboard_{today_slug}.html"
@@ -513,7 +525,7 @@ def _update_index(
   :root{{
     --bg:#ffffff;--surface:#fff;--surface-2:#fbfbfe;--surface2:#fbfbfe;
     --border:#e5e8f0;--border2:#d4d9e8;--border-2:#d4d9e8;
-    --text:#0d1426;--muted:#5b6178;--subtle:#9499b3;
+    --text:#0d1426;--muted:#5b6178;--subtle:#9499b3;--subtle-lt:#f3f4f7;--subtle-mid:#d7d9e2;
     --navy:#0f1b3d;--navy2:#16234a;--navy-2:#16234a;--navy-lt:#eef1f8;--navy-mid:#c9d0e3;
     --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
     --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
@@ -730,6 +742,8 @@ def _update_index(
 {hub_html}
 
 {tools_html}
+
+{ranked_html}
 
 {industry_html}
 

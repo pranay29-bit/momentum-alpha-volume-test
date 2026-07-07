@@ -27,8 +27,8 @@ from .dashboard   import build_passing_dashboard, build_passing_ema10_dashboard,
 from .result_calendar import get_result_date
 from .indicators  import get_market_sentiment
 from . import net_new_highs as nnh
+from . import minervini_rank as mrank
 from . import holidays as nse_holidays
-from scanner.ranking import calculate_minervini_score
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -266,6 +266,37 @@ def run() -> None:
     # ── 9c. Net New Highs (market breadth) ────────────────────────────────────
     logger.info("Computing Net New Highs breadth…")
     nnh_stats = nnh.run(df, date_display)
+
+    # ── 9d. Minervini composite ranking ───────────────────────────────────────
+    if not passing.empty:
+        logger.info("Ranking %d passing stocks…", len(passing))
+        ranked = mrank.rank_stocks(
+            passing,                 # score these
+            passing,                 # relative industry-group strength computed against this same set
+            DOCS_DIR,
+            today_str,
+            sentiment=sentiment,
+            nnh_stats=nnh_stats,
+        )
+        ranked_path = out_dir / f"ranked_stocks_{today_str}.csv"
+        ranked.to_csv(ranked_path, index=False)
+        logger.info("Ranked stocks → %s (top: %s, grade %s)",
+                     ranked_path,
+                     ranked.iloc[0]["symbol"] if len(ranked) else "n/a",
+                     ranked.iloc[0]["grade"] if len(ranked) else "n/a")
+
+        # Merge the score/grade columns back onto `passing` (by symbol) so
+        # anything downstream that already receives `passing` — the Industry
+        # Breakdown widget, future dashboard work, etc. — has access to them
+        # without needing a second lookup.
+        score_cols = ["rank", "rs_score", "vcp_score", "volume_score", "entry_score",
+                      "group_score", "entry_status", "minervini_score", "grade",
+                      "market_state", "market_multiplier"]
+        passing = passing.merge(
+            ranked[["symbol"] + score_cols], on="symbol", how="left"
+        )
+    else:
+        ranked = pd.DataFrame()
 
     # ── 10. Update docs/index.html  (GitHub Pages landing page) ───────────────
     _update_index(today_str, out_dir, len(passing), len(passing_ema10), sentiment=sentiment, nnh_stats=nnh_stats, passing=passing)

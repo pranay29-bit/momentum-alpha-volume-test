@@ -1931,3 +1931,260 @@ if (typeof window.toggleAccordion !== 'function') {
 }
 </script>
 """
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  HOMEPAGE WIDGET — Minervini Composite Ranking leaderboard
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Renders a self-contained HTML fragment (CSS + markup) for docs/index.html
+# showing today's Minervini-style composite ranking (see
+# scanner/minervini_rank.py) — a KPI strip (stocks ranked, average score,
+# grade counts, market state) followed by a top-N leaderboard table with a
+# per-pillar sub-score breakdown, so it's clear *why* a stock ranked where
+# it did, not just the final number.
+#
+# Expects `passing_df` to already carry the columns minervini_rank.rank_stocks
+# adds (rank, minervini_score, grade, rs_score, vcp_score, volume_score,
+# entry_score, group_score, entry_status, market_state, market_multiplier) —
+# main.py merges these onto `passing` right after ranking. If they're not
+# present (ranking failed, or an older CSV without them), this renders a
+# graceful empty state instead of raising.
+
+_RANK_GRADE_COLORS = {
+    "A+": "emerald",
+    "A":  "blue",
+    "B":  "violet",
+    "C":  "amber",
+    "D":  "red",
+}
+
+_RANK_ENTRY_COLORS = {
+    "actionable":               "emerald",
+    "watch — approaching pivot": "amber",
+    "extended":                 "red",
+}
+
+_RANK_MARKET_BADGES = {
+    "confirmed_uptrend": ("emerald", "🟢 Confirmed Uptrend"),
+    "under_pressure":    ("amber",   "🟡 Uptrend Under Pressure"),
+    "correction":        ("red",     "🔴 Correction / Downtrend"),
+    "unknown":           ("subtle",  "⚪ Unknown"),
+}
+
+_RANK_SCORE_COLS = [
+    "rank", "symbol", "minervini_score", "grade", "entry_status",
+    "rs_score", "vcp_score", "volume_score", "entry_score", "group_score",
+    "market_state", "market_multiplier",
+]
+
+
+def _rank_score_cell(v) -> str:
+    """Small helper: color a 0–100 sub-score green/amber/red at a glance."""
+    try:
+        f = float(v)
+    except Exception:
+        return "—"
+    color = "var(--emerald)" if f >= 70 else ("var(--amber)" if f >= 40 else "var(--red)")
+    return f'<span style="color:{color};font-family:var(--mono);font-weight:600">{f:.0f}</span>'
+
+
+def build_minervini_ranking(passing_df: "pd.DataFrame", date_display: str, ranked_csv_link: str | None = None) -> str:
+    """
+    Build the homepage "Minervini Ranking" leaderboard widget from today's
+    Stage-1-gated stocks, already scored by scanner/minervini_rank.py.
+
+    Returns a self-contained HTML fragment (markup + scoped CSS) ready to be
+    dropped into docs/index.html. Falls back to an empty-state card if the
+    ranking columns aren't present on `passing_df`.
+    """
+    has_scores = (
+        passing_df is not None and not passing_df.empty and
+        "minervini_score" in passing_df.columns and passing_df["minervini_score"].notna().any()
+    )
+
+    csv_link_html = (
+        f'<a href="{ranked_csv_link}" class="btn-link violet">📄 Full ranked CSV</a>'
+        if ranked_csv_link else ""
+    )
+
+    if not has_scores:
+        return f"""
+<div class="rank-section" id="rank-section">
+  <div class="rank-titlebar">
+    <div class="rank-titlewrap">
+      <div class="rank-eyebrow"><span class="rank-dot"></span>MINERVINI RANKING</div>
+      <h2 class="rank-heading">Today's Top-Ranked Setups</h2>
+      <p class="rank-sub">No ranking data yet for {date_display} — runs automatically after the next scan.</p>
+    </div>
+  </div>
+  <div class="rank-card">
+    <div class="rank-empty">No stocks have been ranked yet &mdash; check back after the next run.</div>
+  </div>
+</div>
+{_RANK_STYLE}
+"""
+
+    df = passing_df.dropna(subset=["minervini_score"]).copy()
+    df = df.sort_values("rank")
+
+    n_ranked   = len(df)
+    avg_score  = round(df["minervini_score"].mean(), 1)
+    grade_counts = df["grade"].value_counts()
+    top_grades   = " · ".join(
+        f"{grade_counts.get(g, 0)} {g}" for g in ["A+", "A", "B"] if grade_counts.get(g, 0) > 0
+    ) or "—"
+
+    market_state = df["market_state"].iloc[0] if "market_state" in df.columns else "unknown"
+    market_mult  = df["market_multiplier"].iloc[0] if "market_multiplier" in df.columns else 1.0
+    badge_color, badge_label = _RANK_MARKET_BADGES.get(market_state, _RANK_MARKET_BADGES["unknown"])
+
+    TOP_N = 15
+    top_rows = df.head(TOP_N)
+    remaining = n_ranked - len(top_rows)
+
+    row_html_parts = []
+    for _, r in top_rows.iterrows():
+        sym       = str(r.get("symbol", "")).replace(".NS", "")
+        tv_link   = _tv_link(str(r.get("symbol", "")))
+        grade     = str(r.get("grade", "—"))
+        grade_col = _RANK_GRADE_COLORS.get(grade, "subtle")
+        status    = str(r.get("entry_status", "—"))
+        status_col = _RANK_ENTRY_COLORS.get(status, "subtle")
+        score     = r.get("minervini_score", None)
+        score_str = f"{score:.1f}" if pd.notna(score) else "—"
+        rank_num  = int(r["rank"]) if pd.notna(r.get("rank")) else "—"
+
+        row_html_parts.append(f"""
+        <tr>
+          <td class="rank-num">{rank_num}</td>
+          <td><a class="rank-sym" href="{tv_link}" target="_blank" rel="noopener">{html.escape(sym)} &#8599;</a></td>
+          <td><span class="rank-grade-pill" style="color:var(--{grade_col});background:var(--{grade_col}-lt);border-color:var(--{grade_col}-mid)">{grade}</span></td>
+          <td class="r"><span class="rank-score-big">{score_str}</span></td>
+          <td class="r">{_rank_score_cell(r.get('rs_score'))}</td>
+          <td class="r">{_rank_score_cell(r.get('vcp_score'))}</td>
+          <td class="r">{_rank_score_cell(r.get('volume_score'))}</td>
+          <td class="r">{_rank_score_cell(r.get('entry_score'))}</td>
+          <td class="r">{_rank_score_cell(r.get('group_score'))}</td>
+          <td><span class="rank-status-pill" style="color:var(--{status_col});background:var(--{status_col}-lt);border-color:var(--{status_col}-mid)">{html.escape(status)}</span></td>
+        </tr>""")
+
+    rows_html = "".join(row_html_parts)
+
+    footer_note = (
+        f'<div class="rank-footnote">+ {remaining} more ranked stock{"s" if remaining != 1 else ""} in the full CSV.</div>'
+        if remaining > 0 else ""
+    )
+
+    return f"""
+<div class="rank-section" id="rank-section">
+  <div class="rank-titlebar">
+    <div class="rank-titlewrap">
+      <div class="rank-eyebrow"><span class="rank-dot"></span>MINERVINI RANKING</div>
+      <h2 class="rank-heading">Today's Top-Ranked Setups</h2>
+      <p class="rank-sub">Composite score across RS, VCP, Volume, Entry &amp; Group strength for every stock passing the Trend Template today &middot; {date_display}</p>
+    </div>
+    {csv_link_html}
+  </div>
+
+  <div class="rank-card">
+    <div class="rank-kpis">
+      <div class="rank-kpi" style="--accent:var(--indigo)">
+        <div class="rank-kpi-lbl">Stocks Ranked</div>
+        <div class="rank-kpi-val">{n_ranked}</div>
+      </div>
+      <div class="rank-kpi" style="--accent:var(--blue)">
+        <div class="rank-kpi-lbl">Average Score</div>
+        <div class="rank-kpi-val">{avg_score}</div>
+      </div>
+      <div class="rank-kpi" style="--accent:var(--emerald)">
+        <div class="rank-kpi-lbl">Top Grades</div>
+        <div class="rank-kpi-val" style="font-size:1rem">{top_grades}</div>
+      </div>
+      <div class="rank-kpi" style="--accent:var(--{badge_color})">
+        <div class="rank-kpi-lbl">Market State</div>
+        <div class="rank-kpi-val" style="font-size:.92rem">{badge_label}</div>
+        <div class="rank-kpi-hint">score &times;{market_mult:.2f}</div>
+      </div>
+    </div>
+
+    <div class="rank-table-wrap">
+      <table class="rank-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Symbol</th><th>Grade</th><th class="r">Score</th>
+            <th class="r">RS</th><th class="r">VCP</th><th class="r">Vol</th>
+            <th class="r">Entry</th><th class="r">Grp</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>{rows_html}
+        </tbody>
+      </table>
+    </div>
+    {footer_note}
+  </div>
+</div>
+{_RANK_STYLE}
+"""
+
+
+_RANK_STYLE = """
+<style>
+.rank-section{max-width:1120px;margin:0 auto 2.2rem;padding:0 1.5rem;}
+.rank-titlebar{display:flex;justify-content:space-between;align-items:flex-start;gap:1.25rem;flex-wrap:wrap;margin-bottom:1rem;}
+.rank-titlewrap{min-width:220px;flex:1;}
+.rank-eyebrow{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.62rem;
+              font-weight:700;letter-spacing:.14em;color:var(--indigo);margin-bottom:.4rem;}
+.rank-dot{width:6px;height:6px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 3px var(--emerald-lt);}
+.rank-heading{font-family:var(--sans);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;
+              color:var(--text);margin-bottom:.3rem;}
+.rank-sub{font-family:var(--sans);font-size:.8rem;color:var(--muted);max-width:680px;line-height:1.55;}
+
+.rank-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+           box-shadow:var(--shadow-sm);overflow:hidden;}
+.rank-empty{text-align:center;padding:2.4rem 1rem;color:var(--muted);font-size:.83rem;font-family:var(--mono);}
+
+.rank-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid var(--border);}
+.rank-kpi{padding:.95rem 1.35rem;border-right:1px solid var(--border);position:relative;min-width:0;}
+.rank-kpi:last-child{border-right:none;}
+.rank-kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);}
+.rank-kpi-lbl{font-family:var(--mono);font-size:.6rem;font-weight:600;text-transform:uppercase;
+              letter-spacing:.1em;color:var(--muted);margin-bottom:.35rem;}
+.rank-kpi-val{font-family:var(--sans);font-size:1.15rem;font-weight:700;letter-spacing:-.02em;
+              color:var(--accent);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-kpi-hint{font-family:var(--mono);font-size:.62rem;color:var(--subtle);margin-top:.2rem;}
+
+.rank-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.rank-table{width:100%;border-collapse:collapse;min-width:640px;}
+.rank-table thead th{font-family:var(--mono);font-size:.6rem;font-weight:700;text-transform:uppercase;
+                     letter-spacing:.08em;color:var(--subtle);padding:.7rem .8rem;text-align:left;
+                     background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap;}
+.rank-table td{padding:.6rem .8rem;border-bottom:1px solid var(--border);font-size:.83rem;color:var(--text);}
+.rank-table tr:last-child td{border-bottom:none;}
+.rank-table tr:hover td{background:var(--indigo-lt);}
+th.r,td.r{text-align:right;}
+.rank-num{font-family:var(--mono);color:var(--subtle);font-weight:600;}
+
+.rank-sym{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--mono);font-weight:500;
+          font-size:.72rem;padding:.2rem .6rem;border-radius:6px;letter-spacing:.05em;border:1px solid;
+          background:var(--indigo-lt);border-color:var(--indigo-mid);color:var(--indigo);
+          text-decoration:none;transition:filter .12s;}
+.rank-sym:hover{filter:brightness(.93);}
+
+.rank-grade-pill{display:inline-block;font-family:var(--mono);font-size:.72rem;font-weight:700;
+                 padding:.16rem .55rem;border-radius:999px;border:1px solid;min-width:2.1rem;text-align:center;}
+.rank-status-pill{display:inline-block;font-family:var(--mono);font-size:.66rem;font-weight:500;
+                  padding:.16rem .55rem;border-radius:999px;border:1px solid;white-space:nowrap;}
+.rank-score-big{font-family:var(--sans);font-weight:700;font-size:.92rem;color:var(--text);}
+
+.rank-footnote{padding:.7rem 1.1rem;font-family:var(--mono);font-size:.68rem;color:var(--subtle);
+               border-top:1px solid var(--border);}
+
+@media (max-width:768px){
+  .rank-section{padding:0 1rem;}
+  .rank-heading{font-size:1.1rem;}
+  .rank-kpi{padding:.8rem 1rem;}
+  .rank-kpi-val{font-size:1.02rem;}
+}
+</style>
+"""

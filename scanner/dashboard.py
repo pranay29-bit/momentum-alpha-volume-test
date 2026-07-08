@@ -1974,7 +1974,7 @@ _RANK_MARKET_BADGES = {
 
 _RANK_SCORE_COLS = [
     "rank", "symbol", "minervini_score", "grade", "entry_status",
-    "rs_score", "vcp_score", "volume_score", "entry_score", "group_score",
+    "rs_score", "vcp_score", "volume_score", "newhigh_score", "entry_score", "group_score",
     "market_state", "market_multiplier",
 ]
 
@@ -2013,7 +2013,7 @@ def build_minervini_ranking(passing_df: "pd.DataFrame", date_display: str, ranke
 <div class="rank-section" id="rank-section">
   <div class="rank-titlebar">
     <div class="rank-titlewrap">
-      <div class="rank-eyebrow"><span class="rank-dot"></span>MINERVINI RANKING</div>
+      <div class="rank-eyebrow"><span class="rank-dot"></span>MINERVINI + O'NEIL RANKING</div>
       <h2 class="rank-heading">Today's Top-Ranked Setups</h2>
       <p class="rank-sub">No ranking data yet for {date_display} — runs automatically after the next scan.</p>
     </div>
@@ -2064,6 +2064,7 @@ def build_minervini_ranking(passing_df: "pd.DataFrame", date_display: str, ranke
           <td class="r">{_rank_score_cell(r.get('rs_score'))}</td>
           <td class="r">{_rank_score_cell(r.get('vcp_score'))}</td>
           <td class="r">{_rank_score_cell(r.get('volume_score'))}</td>
+          <td class="r">{_rank_score_cell(r.get('newhigh_score'))}</td>
           <td class="r">{_rank_score_cell(r.get('entry_score'))}</td>
           <td class="r">{_rank_score_cell(r.get('group_score'))}</td>
           <td><span class="rank-status-pill" style="color:var(--{status_col});background:var(--{status_col}-lt);border-color:var(--{status_col}-mid)">{html.escape(status)}</span></td>
@@ -2080,9 +2081,9 @@ def build_minervini_ranking(passing_df: "pd.DataFrame", date_display: str, ranke
 <div class="rank-section" id="rank-section">
   <div class="rank-titlebar">
     <div class="rank-titlewrap">
-      <div class="rank-eyebrow"><span class="rank-dot"></span>MINERVINI RANKING</div>
+      <div class="rank-eyebrow"><span class="rank-dot"></span>MINERVINI + O'NEIL RANKING</div>
       <h2 class="rank-heading">Today's Top-Ranked Setups</h2>
-      <p class="rank-sub">Composite score across RS, VCP, Volume, Entry &amp; Group strength for every stock passing the Trend Template today &middot; {date_display}</p>
+      <p class="rank-sub">Composite score blending Mark Minervini's SEPA/VCP with William O'Neil's CANSLIM — RS, VCP, Volume, New-High Leadership, Entry &amp; Group strength — for every stock passing the Trend Template today, market cap &ge; &#8377;1,000&nbsp;Cr &middot; {date_display}</p>
     </div>
     {csv_link_html}
   </div>
@@ -2114,6 +2115,7 @@ def build_minervini_ranking(passing_df: "pd.DataFrame", date_display: str, ranke
           <tr>
             <th>#</th><th>Symbol</th><th>Grade</th><th class="r">Score</th>
             <th class="r">RS</th><th class="r">VCP</th><th class="r">Vol</th>
+            <th class="r" title="New-High Leadership (O'Neil)">NH</th>
             <th class="r">Entry</th><th class="r">Grp</th><th>Status</th>
           </tr>
         </thead>
@@ -2155,7 +2157,7 @@ _RANK_STYLE = """
 .rank-kpi-hint{font-family:var(--mono);font-size:.62rem;color:var(--subtle);margin-top:.2rem;}
 
 .rank-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-table.rank-table{width:100%;border-collapse:collapse;min-width:640px;}
+table.rank-table{width:100%;border-collapse:collapse;min-width:720px;}
 .rank-table thead th{font-family:var(--mono);font-size:.6rem;font-weight:700;text-transform:uppercase;
                      letter-spacing:.08em;color:var(--subtle);padding:.7rem .8rem;text-align:left;
                      background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap;}

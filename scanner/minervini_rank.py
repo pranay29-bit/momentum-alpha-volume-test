@@ -1,36 +1,58 @@
 """
 scanner/minervini_rank.py
 --------------------------
-Minervini-style composite ranking system for Stage-1 (Trend Template) stocks.
+Composite ranking system for Stage-1 (Trend Template) stocks, blending
+Mark Minervini's SEPA/VCP approach with William O'Neil's CANSLIM — which
+isn't a stretch, since Minervini's own approach is explicitly built on top
+of O'Neil's (he started out at William O'Neil + Co.). Where the two
+frameworks overlap, one pillar covers both; where O'Neil is genuinely
+distinct, it gets its own pillar rather than being silently absorbed.
 
-This module does NOT re-filter anything — it assumes you're handing it
-stocks that already cleared the 8-condition Trend Template gate (i.e. your
-existing `passing` DataFrame). Its only job is to rank *those* survivors
-against each other using five weighted technical pillars, plus a market
-condition overlay applied to the final score.
+This module does NOT re-filter the Trend Template gate — it assumes you're
+handing it stocks that already cleared the 8-condition gate (your existing
+`passing` DataFrame). It applies one more hard gate of its own (liquidity /
+market cap), then ranks the survivors against each other using six weighted
+technical pillars, plus a market condition overlay applied to the final
+score.
 
 Full rationale / formulas: see the accompanying ranking spec doc. Short
-version of the five pillars + weights (technical-only mode, no
-fundamentals data source wired up yet):
+version of the six pillars + weights (technical-only mode, no fundamentals
+data source wired up yet):
 
-    RS Quality                25%
-    VCP Quality               25%
-    Volume / Supply-Demand    20%
-    Entry Point Proximity     15%
-    Industry Group Leadership 15%
+    RS / Leadership Quality      20%   (Minervini RS + O'Neil "L")
+    VCP Base Quality             20%   (Minervini)
+    Volume / Supply-Demand       18%   (Minervini + O'Neil "S")
+    New-High Leadership          12%   (O'Neil "N" — buy strength, not weakness)
+    Entry Point Proximity        15%   (Minervini — never chase)
+    Industry Group Leadership    15%   (Minervini + O'Neil "L")
+
+O'Neil's CANSLIM "C" (current earnings), "A" (annual earnings), and "I"
+(institutional sponsorship) still have no data source in this pipeline —
+same honest gap as Minervini's fundamentals pillar — so they stay out
+rather than being faked. "M" (market direction) is the existing market
+condition overlay, applied to the final score for both frameworks.
+
+Gate #2 — minimum market cap: stocks below `MIN_MARKET_CAP_CR` (₹1,000 Cr
+by default) are excluded from ranking entirely, same "gate first, rank
+survivors" philosophy as the Trend Template itself. A stock with unknown
+(NaN) market cap is also excluded rather than assumed to pass — we don't
+smuggle a stock through the floor just because its market-cap fetch failed
+that day.
 
 All of this is computed from data the project already collects and
 archives daily (docs/<date>/full_results_<date>.csv) — no new data
-source, no extra network calls. VCP and Volume/Supply-Demand pillars
-reconstruct a trailing multi-day series per symbol by reading back
-through the last N daily archive snapshots.
+source, no extra network calls. VCP, Volume/Supply-Demand, and New-High
+Leadership pillars reconstruct a trailing multi-day series per symbol by
+reading back through the last N daily archive snapshots.
 
 Public entry point:
 
     rank_stocks(passing_df, all_gated_df, docs_dir, today_str,
-                sentiment=None, nnh_stats=None, history_lookback_days=90)
-        -> pd.DataFrame (copy of passing_df + new score columns,
-                         sorted descending by minervini_score)
+                sentiment=None, nnh_stats=None, history_lookback_days=90,
+                min_market_cap_cr=1000.0)
+        -> pd.DataFrame (copy of passing_df, filtered to cap-eligible rows
+                         + new score columns, sorted descending by
+                         minervini_score)
 """
 
 from __future__ import annotations
@@ -47,13 +69,16 @@ logger = logging.getLogger(__name__)
 # ── Tunable constants (spec-driven, not hardcoded magic numbers) ─────────────
 
 PILLAR_WEIGHTS = {
-    "rs":     0.25,
-    "vcp":    0.25,
-    "volume": 0.20,
-    "entry":  0.15,
-    "group":  0.15,
+    "rs":      0.20,
+    "vcp":     0.20,
+    "volume":  0.18,
+    "newhigh": 0.12,
+    "entry":   0.15,
+    "group":   0.15,
     # "fundamentals": 0.00   # held at 0 until a fundamentals data source exists
 }
+
+MIN_MARKET_CAP_CR = 1000.0   # Gate #2 — below this, a stock isn't ranked at all
 
 MARKET_MULTIPLIERS = {
     "confirmed_uptrend": 1.00,
@@ -76,6 +101,7 @@ VCP_MIN_HISTORY_ROWS     = 15   # below this, VCP score falls back to neutral
 VCP_SWING_WINDOW         = 3    # ± days to confirm a local high/low
 ENTRY_PIVOT_LOOKBACK     = 15   # trailing days (excluding today) used as pivot proxy
 ACC_DIST_LOOKBACK_ROWS   = 20   # trailing rows scanned for accumulation/distribution
+NEW_HIGH_RECENCY_LOOKBACK = 10  # trailing rows scanned for "how many days since a new 52w high"
 
 
 # ── Small numeric helpers ──────────────────────────────────────────────────────
@@ -450,6 +476,46 @@ def score_entry(hist: pd.DataFrame) -> tuple[float, str]:
 
 # ── 6. Pillar 5 — Industry Group Leadership (10–15%) ──────────────────────────
 
+def score_new_high(hist: pd.DataFrame) -> float:
+    """
+    O'Neil's "N" — buy stocks making NEW highs, not stocks that look cheap
+    because they're down. This is the one genuinely distinct CANSLIM signal
+    not already covered by the RS/VCP/Entry pillars above:
+
+      Recency (60%):  how many days since the stock last printed a new
+                       52-week high (today counts as 0 days ago). Full marks
+                       if it's today; decays to 0 over NEW_HIGH_RECENCY_LOOKBACK
+                       trading days; 0 if no new high anywhere in the window.
+      Proximity (40%): how close today's close is to its 52-week high.
+                       Full marks at/through the high; scales down to 0 at the
+                       Trend-Template gate's own floor (80% of the 52w high —
+                       i.e. "within 25%"), so this pillar spans the entire
+                       eligible band rather than clustering near 100 or 0.
+    """
+    if hist.empty or "close" not in hist.columns:
+        return 0.0
+    today = hist.iloc[-1]
+
+    recency_score = 0.0
+    if "is_52w_high" in hist.columns:
+        tail = hist["is_52w_high"].tail(NEW_HIGH_RECENCY_LOOKBACK).reset_index(drop=True)
+        hit_positions = [i for i, v in enumerate(tail) if bool(v)]
+        if hit_positions:
+            days_ago = (len(tail) - 1) - hit_positions[-1]
+            recency_score = max(0.0, 100.0 - days_ago * (100.0 / NEW_HIGH_RECENCY_LOOKBACK))
+
+    proximity_score = 0.0
+    close = today.get("close", np.nan)
+    high_52w = today.get("52w_high", np.nan)
+    if pd.notna(close) and pd.notna(high_52w) and high_52w > 0:
+        ratio = close / high_52w
+        proximity_score = _clamp((ratio - 0.80) / 0.20 * 100.0, 0, 100)
+
+    return 0.6 * recency_score + 0.4 * proximity_score
+
+
+# ── 7. Pillar 6 — Industry Group Leadership (10–15%) ──────────────────────────
+
 def score_groups(gated_df: pd.DataFrame) -> pd.Series:
     """
     Percentile-rank each stock's industry group by the group's median
@@ -469,7 +535,7 @@ def score_groups(gated_df: pd.DataFrame) -> pd.Series:
     return gated_df["industry_group"].map(group_pct_rank).fillna(50.0)
 
 
-# ── 7. Market condition overlay ────────────────────────────────────────────────
+# ── 8. Market condition overlay ────────────────────────────────────────────────
 
 def market_state_and_multiplier(sentiment: dict | None, nnh_stats: dict | None) -> tuple[str, float]:
     """
@@ -501,7 +567,7 @@ def market_state_and_multiplier(sentiment: dict | None, nnh_stats: dict | None) 
     return state, round(multiplier, 4)
 
 
-# ── 8. Public entry point ──────────────────────────────────────────────────────
+# ── 9. Public entry point ──────────────────────────────────────────────────────
 
 def rank_stocks(
     passing_df: pd.DataFrame,
@@ -511,14 +577,20 @@ def rank_stocks(
     sentiment: dict | None = None,
     nnh_stats: dict | None = None,
     history_lookback_days: int = 90,
+    min_market_cap_cr: float = MIN_MARKET_CAP_CR,
 ) -> pd.DataFrame:
     """
-    Rank Stage-1-gated stocks (`passing_df`) using the five weighted
+    Rank Stage-1-gated stocks (`passing_df`) using the six weighted
     technical pillars + market overlay described in the ranking spec.
+
+    Applies a second gate first: stocks with `total_market_cap_cr` below
+    `min_market_cap_cr` (or missing/unknown market cap) are excluded from
+    ranking entirely — never scored, never in the output — same "gate
+    first, rank survivors" philosophy as the Trend Template itself.
 
     Parameters
     ----------
-    passing_df : the stocks to actually score and return, ranked.
+    passing_df : the stocks to gate-check and (if eligible) score & return.
     gated_df   : the full set of Stage-1-gated stocks for the day, used to
                  compute relative Industry Group Leadership. Pass the same
                  DataFrame as `passing_df` if you don't have a broader set.
@@ -526,13 +598,39 @@ def rank_stocks(
     today_str  : today's date as YYYYMMDD (matches the archive folder naming).
     sentiment  : optional dict from indicators.get_market_sentiment().
     nnh_stats  : optional dict from net_new_highs.run()/compute_stats().
+    min_market_cap_cr : minimum market cap (₹ Crore) to be eligible for
+                 ranking. Default ₹1,000 Cr.
 
-    Returns a copy of `passing_df` with new columns:
-        rs_score, vcp_score, volume_score, entry_score, group_score,
-        entry_status, minervini_score, grade, market_state, market_multiplier
+    Returns a copy of `passing_df` (filtered to cap-eligible rows only)
+    with new columns:
+        rs_score, vcp_score, volume_score, newhigh_score, entry_score,
+        group_score, entry_status, minervini_score, grade, market_state,
+        market_multiplier
     sorted descending by minervini_score.
     """
     if passing_df is None or passing_df.empty:
+        return passing_df
+
+    # ── Gate #2 — market cap floor (fail-closed on missing data) ──────────────
+    if "total_market_cap_cr" in passing_df.columns:
+        cap = pd.to_numeric(passing_df["total_market_cap_cr"], errors="coerce")
+        eligible_mask = cap >= min_market_cap_cr
+        n_below_cap = int(((cap < min_market_cap_cr) & cap.notna()).sum())
+        n_unknown_cap = int(cap.isna().sum())
+        if n_below_cap or n_unknown_cap:
+            logger.info(
+                "Market-cap gate (≥ ₹%.0f Cr): %d/%d eligible — excluded %d below cap, %d with unknown/missing cap",
+                min_market_cap_cr, int(eligible_mask.sum()), len(passing_df), n_below_cap, n_unknown_cap,
+            )
+        passing_df = passing_df[eligible_mask].copy()
+    else:
+        logger.warning(
+            "No 'total_market_cap_cr' column present — cannot apply the ₹%.0f Cr market-cap "
+            "gate, so no stocks were ranked this run.", min_market_cap_cr,
+        )
+        passing_df = passing_df.iloc[0:0]
+
+    if passing_df.empty:
         return passing_df
 
     gated_df = gated_df if gated_df is not None and not gated_df.empty else passing_df
@@ -546,7 +644,7 @@ def rank_stocks(
 
     market_state, market_multiplier = market_state_and_multiplier(sentiment, nnh_stats)
 
-    rs_scores, vcp_scores, volume_scores, entry_scores = [], [], [], []
+    rs_scores, vcp_scores, volume_scores, newhigh_scores, entry_scores = [], [], [], [], []
     entry_statuses, vcp_details = [], []
 
     for _, row in passing_df.iterrows():
@@ -557,29 +655,33 @@ def rank_stocks(
         rs = score_rs(hist)
         vcp, vcp_detail = score_vcp(hist)
         vol = score_volume(hist)
+        newhigh = score_new_high(hist)
         entry, entry_status = score_entry(hist)
 
         rs_scores.append(round(rs, 1))
         vcp_scores.append(round(vcp, 1))
         volume_scores.append(round(vol, 1))
+        newhigh_scores.append(round(newhigh, 1))
         entry_scores.append(round(entry, 1))
         entry_statuses.append(entry_status)
         vcp_details.append(vcp_detail)
 
     out = passing_df.copy()
-    out["rs_score"]     = rs_scores
-    out["vcp_score"]    = vcp_scores
-    out["volume_score"] = volume_scores
-    out["entry_score"]  = entry_scores
-    out["group_score"]  = out["symbol"].map(group_score_by_symbol).fillna(50.0)
-    out["entry_status"] = entry_statuses
+    out["rs_score"]      = rs_scores
+    out["vcp_score"]     = vcp_scores
+    out["volume_score"]  = volume_scores
+    out["newhigh_score"] = newhigh_scores
+    out["entry_score"]   = entry_scores
+    out["group_score"]   = out["symbol"].map(group_score_by_symbol).fillna(50.0)
+    out["entry_status"]  = entry_statuses
 
     composite = (
-        PILLAR_WEIGHTS["rs"]     * out["rs_score"] +
-        PILLAR_WEIGHTS["vcp"]    * out["vcp_score"] +
-        PILLAR_WEIGHTS["volume"] * out["volume_score"] +
-        PILLAR_WEIGHTS["entry"]  * out["entry_score"] +
-        PILLAR_WEIGHTS["group"]  * out["group_score"]
+        PILLAR_WEIGHTS["rs"]      * out["rs_score"] +
+        PILLAR_WEIGHTS["vcp"]     * out["vcp_score"] +
+        PILLAR_WEIGHTS["volume"]  * out["volume_score"] +
+        PILLAR_WEIGHTS["newhigh"] * out["newhigh_score"] +
+        PILLAR_WEIGHTS["entry"]   * out["entry_score"] +
+        PILLAR_WEIGHTS["group"]   * out["group_score"]
     )
 
     out["market_state"]      = market_state

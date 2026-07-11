@@ -1,13 +1,13 @@
 """
 scanner/nse_client.py
 ---------------------
-Handles fetching market-cap, free-float, and traded-value data.
+Handles fetching market-cap, free-float, traded-value, and price-band data.
 
-Primary source: yfinance fast_info (with .info as a secondary fallback).
-Yahoo Finance is frequently rate-limited or blocked from shared/CI IPs
-(GitHub Actions runners in particular), which previously showed up as
-every stock's market-cap / traded-value coming back "N/A" with no
-retry and no alternate source. This version adds:
+Primary source for market-cap/traded-value: yfinance fast_info (with .info
+as a secondary fallback). Yahoo Finance is frequently rate-limited or
+blocked from shared/CI IPs (GitHub Actions runners in particular), which
+previously showed up as every stock's market-cap / traded-value coming
+back "N/A" with no retry and no alternate source. This version adds:
 
   1. A short retry-with-backoff around the yfinance fetch, since most
      Yahoo blocks are transient (a 429/999 that succeeds a few seconds
@@ -19,11 +19,20 @@ retry and no alternate source. This version adds:
      NSE-listed symbols since it's the exchange's own data, not a
      third-party scrape.
 
+Price band (the circuit filter %, e.g. "5%", "10%", "20%", "No Band") is
+NSE-exclusive data — yfinance has no equivalent field at all — so it's
+always fetched from NSE's own quote-equity API (the same one
+https://www.nseindia.com/get-quotes/equity?symbol=... uses), regardless of
+whether yfinance already answered the market-cap questions. To avoid
+doubling NSE requests, the market-cap NSE-fallback path and the price-band
+fetch share a single NSE quote call per symbol whenever both are needed in
+the same run.
+
 Both paths are independent and defensive — if one fails/errors for any
 reason, the other still has a chance to fill in the numbers, and if both
-fail the columns are NaN (rendered as "N/A") exactly as before, so this
-is purely additive resilience with no new hard dependency on either
-source being up.
+fail the columns are NaN/"—" (rendered as "N/A"/"—" in the dashboards)
+exactly as before, so this is purely additive resilience with no new hard
+dependency on either source being up.
 """
 
 from __future__ import annotations
@@ -45,9 +54,11 @@ _EMPTY = {
     "traded_value_cr":      np.nan,
     "traded_volume":        np.nan,
     "traded_val_pct_mc":    np.nan,
+    "price_band":           "—",
 }
 
 _CR = 10_000_000.0   # 1 Crore = 10,000,000
+_PRICE_BAND_EMPTY = "—"
 
 # ── NSE fallback client (lazy singleton — only created if actually needed) ────
 _nse_live = None
@@ -64,6 +75,43 @@ def _get_nse_live():
             logger.warning("Could not initialize NSE fallback client: %s", exc)
             _nse_live = False   # sentinel: don't keep retrying construction
     return _nse_live or None
+
+
+def _nse_quote_raw(symbol_ns: str) -> dict | None:
+    """
+    Single raw NSE quote-equity fetch, shared by the market-cap NSE-fallback
+    path and the price-band fetch so a symbol needing both only costs one
+    NSE request, not two.
+    """
+    nse = _get_nse_live()
+    if nse is None:
+        return None
+    sym = symbol_ns.replace(".NS", "").strip().upper()
+    try:
+        q = nse.stock_quote(sym)
+        return q if isinstance(q, dict) else None
+    except Exception as exc:
+        logger.debug("NSE quote fetch failed for %s: %s", sym, exc)
+        return None
+
+
+def _extract_price_band(quote: dict) -> str:
+    """
+    Pull the circuit price band out of an NSE quote-equity response, e.g.
+    "5%", "10%", "20%", or "No Band" for band-exempt stocks (usually
+    F&O-eligible large caps). Normalized to a clean display string.
+    """
+    try:
+        price_info = quote.get("priceInfo", {}) or {}
+        band = price_info.get("pPriceBand")
+        if not band:
+            return _PRICE_BAND_EMPTY
+        band = str(band).strip()
+        if band.lower() in ("no band", "none", ""):
+            return "No Band"
+        return band
+    except Exception:
+        return _PRICE_BAND_EMPTY
 
 
 def _rnd(v, n=2):
@@ -169,28 +217,29 @@ def _fetch_from_yfinance(symbol_ns: str, attempts: int = 2) -> dict:
     return _EMPTY.copy()
 
 
-# ── 2. NSE India quote API (fallback) ──────────────────────────────────────────
+# ── 2. NSE India quote API (fallback for market cap, primary for price band) ──
 
-def _fetch_from_nse(symbol_ns: str) -> dict:
+def _fetch_from_nse(symbol_ns: str, quote: dict | None = None) -> dict:
     """
-    Fetch market-cap and traded-value straight from NSE India's own
-    quote-equity API (via jugaad_data's NSELive), which mirrors what
-    https://www.nseindia.com/get-quotes/equity?symbol=... shows.
+    Fetch market-cap, traded-value, and price-band straight from NSE
+    India's own quote-equity API (via jugaad_data's NSELive), which
+    mirrors what https://www.nseindia.com/get-quotes/equity?symbol=...
+    shows.
 
-    Market cap  = last traded price × issued share capital.
+    Market cap   = last traded price × issued share capital.
     Traded value = NSE's own reported total traded value for the day
                    (no need to derive it — NSE publishes it directly).
+    Price band   = NSE's circuit filter %, straight from the same response.
+
+    Pass an already-fetched `quote` dict (from `_nse_quote_raw`) to avoid
+    making a second NSE request for a symbol that needs both market-cap
+    fallback and price band.
     """
-    nse = _get_nse_live()
-    if nse is None:
+    q = quote if quote is not None else _nse_quote_raw(symbol_ns)
+    if q is None:
         return _EMPTY.copy()
 
-    sym = symbol_ns.replace(".NS", "").strip().upper()
     try:
-        q = nse.stock_quote(sym)
-        if not isinstance(q, dict):
-            return _EMPTY.copy()
-
         price_info    = q.get("priceInfo", {}) or {}
         security_info = q.get("securityInfo", {}) or {}
         trade_info    = ((q.get("marketDeptOrderBook", {}) or {}).get("tradeInfo", {})) or {}
@@ -218,10 +267,12 @@ def _fetch_from_nse(symbol_ns: str) -> dict:
             "traded_value_cr":     _rnd(traded_value_cr),
             "traded_volume":       int(total_volume) if total_volume else np.nan,
             "traded_val_pct_mc":   _rnd(traded_val_pct_mc, 4),
+            "price_band":          _extract_price_band(q),
         }
 
     except Exception as exc:
-        logger.debug("NSE quote fallback failed for %s: %s", sym, exc)
+        sym = symbol_ns.replace(".NS", "").strip().upper()
+        logger.debug("NSE quote parsing failed for %s: %s", sym, exc)
         return _EMPTY.copy()
 
 
@@ -229,51 +280,63 @@ def _fetch_from_nse(symbol_ns: str) -> dict:
 
 def fetch_market_cap(symbol_ns: str) -> dict:
     """
-    Fetch market-cap and traded-value for a single NSE symbol.
-    Tries yfinance first (with retries); if that comes back incomplete,
-    fills in any missing fields from NSE India's own quote API.
+    Fetch market-cap, traded-value, and price-band for a single NSE symbol.
+
+    Market cap / traded value: yfinance first (with retries); NSE fills in
+    anything still missing.
+    Price band: NSE-exclusive — always fetched from NSE regardless of how
+    the market-cap fields turned out, sharing a single NSE quote call with
+    the fallback above whenever both are needed.
     """
     result = _fetch_from_yfinance(symbol_ns)
 
-    if not _is_complete(result):
-        nse_result = _fetch_from_nse(symbol_ns)
-        # Fill in only what's still missing — prefer whichever source answered.
-        for key, val in nse_result.items():
-            existing = result.get(key)
-            existing_missing = existing is None or (isinstance(existing, float) and np.isnan(existing))
-            if existing_missing and val is not None and not (isinstance(val, float) and np.isnan(val)):
-                result[key] = val
-        time.sleep(NSE_REQUEST_DELAY)   # be polite to NSE's servers when we do hit them
+    # We need an NSE hit if market cap is still incomplete, OR simply to
+    # get the price band (which yfinance can never provide) — so this now
+    # always makes exactly one NSE request per symbol.
+    quote = _nse_quote_raw(symbol_ns)
+    nse_result = _fetch_from_nse(symbol_ns, quote=quote)
+
+    for key, val in nse_result.items():
+        existing = result.get(key)
+        existing_missing = existing is None or (isinstance(existing, float) and np.isnan(existing))
+        if existing_missing and val is not None and not (isinstance(val, float) and np.isnan(val)):
+            result[key] = val
+
+    result.setdefault("price_band", _PRICE_BAND_EMPTY)
+    time.sleep(NSE_REQUEST_DELAY)   # be polite to NSE's servers — we now always hit them once
 
     return result
 
 
 def enrich_with_market_caps(passing_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add market-cap / liquidity columns to *passing_df*.
-    Iterates symbols using yfinance (falling back to NSE's own API per
-    symbol when needed); returns an enriched copy.
+    Add market-cap / liquidity / price-band columns to *passing_df*.
+    Iterates symbols using yfinance for market-cap/traded-value (falling
+    back to NSE's own API per symbol when needed), and always queries NSE
+    once per symbol for the price band (circuit filter %), since that data
+    is NSE-exclusive. Returns an enriched copy.
     """
     if passing_df.empty:
         return passing_df
 
-    logger.info("Fetching market-cap data for %d stocks…", len(passing_df))
+    logger.info("Fetching market-cap and price-band data for %d stocks…", len(passing_df))
 
     cols: dict[str, list] = {
         "total_market_cap_cr": [],
         "traded_value_cr":     [],
         "traded_volume":       [],
         "traded_val_pct_mc":   [],
+        "price_band":          [],
     }
 
     for i, sym in enumerate(passing_df["symbol"], start=1):
         caps = fetch_market_cap(sym)
         if _is_complete(caps):
-            logger.info("  [%d/%d] %s ✓", i, len(passing_df), sym)
+            logger.info("  [%d/%d] %s ✓ (band: %s)", i, len(passing_df), sym, caps.get("price_band", "—"))
         else:
             logger.debug("  [%d/%d] %s — still incomplete after all sources", i, len(passing_df), sym)
         for key in cols:
-            cols[key].append(caps.get(key, np.nan))
+            cols[key].append(caps.get(key, np.nan if key != "price_band" else _PRICE_BAND_EMPTY))
         time.sleep(0.3)   # polite delay to avoid rate-limiting
 
     out = passing_df.copy()
@@ -286,6 +349,13 @@ def enrich_with_market_caps(passing_df: pd.DataFrame) -> pd.DataFrame:
             "%d/%d stocks still missing market-cap data after yfinance + NSE fallback "
             "(both sources may be temporarily unreachable from this network).",
             n_missing, len(out),
+        )
+
+    n_missing_band = (out["price_band"] == _PRICE_BAND_EMPTY).sum()
+    if n_missing_band:
+        logger.warning(
+            "%d/%d stocks still missing price-band data (NSE may be temporarily unreachable).",
+            n_missing_band, len(out),
         )
 
     return out

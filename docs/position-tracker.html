@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/tracker.css"/>
 <script type="module" src="js/position-tracker.js"></script>
+<link href="trader-theme.css" rel="stylesheet"/>
 </head>
 <body>
 <div class="topbar"></div>
@@ -83,9 +84,9 @@
               <th>Risk %</th>
               <th>Qty</th>
               <th>Current Price</th>
-              <th>P&amp;L %</th>
-              <th>R Multiple</th>
-              <th>Portfolio Impact</th>
+              <th class="sortable" data-table="open" data-key="pnlPct">P&amp;L % <span class="sort-arrow"></span></th>
+              <th class="sortable" data-table="open" data-key="rMultiple">R Multiple <span class="sort-arrow"></span></th>
+              <th class="sortable" data-table="open" data-key="impactPct">Portfolio Impact <span class="sort-arrow"></span></th>
               <th>Book</th>
               <th>Delete</th>
             </tr>
@@ -141,9 +142,9 @@
               <th>Exit Price</th>
               <th>Risk %</th>
               <th>Qty</th>
-              <th>P&amp;L %</th>
-              <th>R Multiple</th>
-              <th>Portfolio Impact</th>
+              <th class="sortable" data-table="booked" data-key="pnlPct">P&amp;L % <span class="sort-arrow"></span></th>
+              <th class="sortable" data-table="booked" data-key="rMultiple">R Multiple <span class="sort-arrow"></span></th>
+              <th class="sortable" data-table="booked" data-key="impactPct">Portfolio Impact <span class="sort-arrow"></span></th>
               <th>Delete</th>
             </tr>
           </thead>

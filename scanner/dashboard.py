@@ -654,6 +654,7 @@ def _html_head(title: str, accent1: str, accent2: str, active: str | None = None
 <title>{title}</title>
 <script src="{_CDN_CHARTJS}"></script>
 <link href="{_GOOGLE_FONTS}" rel="stylesheet"/>
+<link href="../trader-theme.css" rel="stylesheet"/>
 <style>
 :root {{ --ACCENT1:{accent1}; --ACCENT2:{accent2}; }}
 {_BASE_CSS}
@@ -1514,6 +1515,7 @@ def build_main_index(
 <meta charset="utf-8">
 <title>Alpha Momentum Dashboard</title>
 <link href="{_GOOGLE_FONTS}" rel="stylesheet"/>
+<link href="../trader-theme.css" rel="stylesheet"/>
 <style>
 :root {{
   --bg:#ffffff; --surface:#fff; --border:#e5e8f0;

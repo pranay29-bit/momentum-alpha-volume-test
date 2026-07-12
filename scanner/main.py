@@ -260,7 +260,7 @@ def run() -> None:
 
     # ── 9b. Market Sentiment (NIFTY SMALLCAP 250 index) ──────────────────────
     logger.info("Fetching market sentiment (NIFTY SMALLCAP 250)…")
-    sentiment = get_market_sentiment()
+    sentiment = get_market_sentiment(df)
     logger.info("Market sentiment:\n%s", json.dumps(sentiment, indent=2, default=str))
 
     # ── 9c. Net New Highs (market breadth) ────────────────────────────────────
@@ -523,24 +523,24 @@ def _update_index(
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   :root{{
-    --bg:#ffffff;--surface:#fff;--surface-2:#fbfbfe;--surface2:#fbfbfe;
-    --border:#e5e8f0;--border2:#d4d9e8;--border-2:#d4d9e8;
-    --text:#0d1426;--muted:#5b6178;--subtle:#9499b3;--subtle-lt:#f3f4f7;--subtle-mid:#d7d9e2;
-    --navy:#0f1b3d;--navy2:#16234a;--navy-2:#16234a;--navy-lt:#eef1f8;--navy-mid:#c9d0e3;
-    --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
-    --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
-    --blue:#2563eb;--blue-lt:#eff6ff;--blue-mid:#bfdbfe;
-    --amber:#b45309;--amber-lt:#fffbeb;--amber-mid:#fde68a;
-    --violet:#7c3aed;--violet-lt:#f5f3ff;--violet-mid:#ddd6fe;
-    --red:#dc2626;--red-lt:#fef2f2;--red-mid:#fca5a5;
+    --bg:#07111f;--surface:#0d1a2b;--surface-2:#111f33;--surface2:#111f33;
+    --border:#263852;--border2:#334966;--border-2:#334966;
+    --text:#eff6ff;--muted:#a9b9d0;--subtle:#7185a4;--subtle-lt:#17263a;--subtle-mid:#324966;
+    --navy:#c7d9ff;--navy2:#dce8ff;--navy-2:#dce8ff;--navy-lt:#142541;--navy-mid:#34537d;
+    --indigo:#9d8cff;--indigo-lt:#211d4b;--indigo-mid:#514685;
+    --emerald:#31d4a0;--emerald-lt:#0d302c;--emerald-mid:#237c69;
+    --blue:#60a5fa;--blue-lt:#102b4d;--blue-mid:#2864a5;
+    --amber:#f6bd60;--amber-lt:#352711;--amber-mid:#85621e;
+    --violet:#c4a7ff;--violet-lt:#2b1f4a;--violet-mid:#7351a8;
+    --red:#fb7185;--red-lt:#3b1823;--red-mid:#974052;
     --sans:'Outfit',system-ui,-apple-system,sans-serif;--mono:'DM Mono','SF Mono','Courier New',monospace;
     --radius:12px;--radius-sm:8px;--shadow-sm:0 1px 2px rgba(15,23,42,.04);--shadow-md:0 4px 16px -4px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04);
   }}
   *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0;}}
   html{{font-size:14px;-webkit-font-smoothing:antialiased;}}
-  body{{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}}
-  .topbar{{height:3px;background:linear-gradient(90deg,var(--navy) 0%,var(--indigo) 55%,var(--emerald) 100%);}}
-  header{{background:var(--surface);border-bottom:1px solid var(--border);
+  body{{background:radial-gradient(circle at 85% -10%,#20365d 0,transparent 32%),radial-gradient(circle at 0 25%,#142a43 0,transparent 30%),var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}}
+  .topbar{{height:4px;background:linear-gradient(90deg,var(--emerald) 0%,var(--blue) 46%,var(--violet) 100%);}}
+  header{{background:rgba(7,17,31,.82);border-bottom:1px solid var(--border);backdrop-filter:blur(14px);
           padding:1.65rem 2.5rem;text-align:center;}}
   .header-row{{display:flex;align-items:center;justify-content:space-between;
               gap:1.5rem;flex-wrap:wrap;text-align:left;}}
@@ -570,7 +570,7 @@ def _update_index(
   .hub-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;}}
   .hub-card{{
     position:relative;display:flex;flex-direction:column;gap:.6rem;
-    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    background:linear-gradient(145deg,rgba(20,37,61,.92),rgba(13,26,43,.96));border:1px solid var(--border);border-radius:var(--radius);
     padding:1.35rem 1.4rem 1.25rem;box-shadow:var(--shadow-sm);
     text-decoration:none;color:inherit;overflow:hidden;
     transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
@@ -664,8 +664,15 @@ def _update_index(
   /* ── Market Sentiment ── */
   .sentiment-section{{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}}
   .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.1rem;margin-top:.85rem;}}
-  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-                   padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);}}
+  .sentiment-card{{background:linear-gradient(135deg,rgba(19,37,59,.96),rgba(12,26,43,.96));border:1px solid var(--border);border-radius:var(--radius);
+                   padding:1.3rem 1.5rem;box-shadow:0 12px 32px rgba(0,0,0,.16);}}
+  .nnh-section{{margin-top:2rem;}}
+  .nnh-section .section-title{{font-size:1.25rem;letter-spacing:-.025em;}}
+  .nnh-card{{border-color:rgba(49,212,160,.38);background:linear-gradient(135deg,rgba(16,55,58,.95),rgba(15,30,49,.98));}}
+  .nnh-metrics{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin:1rem 0;}}
+  .nnh-metric{{padding:.75rem .9rem;border-radius:10px;background:rgba(7,17,31,.45);border:1px solid rgba(125,151,180,.18);}}
+  .nnh-metric-label{{display:block;color:var(--subtle);font:600 .62rem var(--mono);letter-spacing:.09em;text-transform:uppercase;}}
+  .nnh-metric-value{{display:block;margin-top:.12rem;font:700 1.18rem var(--mono);}}
   .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}}
   .sentiment-index-name{{font-weight:700;font-size:.9rem;letter-spacing:-.01em;}}
   .overall-badge{{display:inline-block;padding:.22rem .8rem;border-radius:999px;
@@ -717,6 +724,7 @@ def _update_index(
     header h1{{font-size:1.4rem;}}
     header p{{font-size:.72rem;}}
     .sentiment-card{{padding:1rem 1.1rem;}}
+    .nnh-metrics{{grid-template-columns:1fr;gap:.45rem;}}
     .ema-row{{gap:.45rem;}}
     .ema-pill{{font-size:.68rem;padding:.26rem .65rem;}}
     .hub-grid{{grid-template-columns:1fr;}}
@@ -729,13 +737,15 @@ def _update_index(
   <div class="brand-name-idx"><div class="brand-dot"></div>Alpha Momentum</div>
   <div class="header-row">
     <div class="header-titles">
-      <h1>NSE Trend Scanner</h1>
-      <p>Daily Minervini trend-template scans · Free-float &amp; liquidity data · NSE India</p>
+      <h1>NSE Market Command Center</h1>
+      <p>Momentum breadth · high-conviction setups · free-float &amp; liquidity data · NSE India</p>
     </div>
   </div>
 </header>
 
 {site_nav_html}
+
+{nnh_html}
 
 {sentiment_html}
 
@@ -746,8 +756,6 @@ def _update_index(
 {ranked_html}
 
 {industry_html}
-
-{nnh_html}
 
 <div class="container">
   <h2 class="section-title">Scan History</h2>

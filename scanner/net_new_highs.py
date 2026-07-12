@@ -221,7 +221,7 @@ def build_html(stats: dict) -> str:
     Nitin R's TradingView Net New Highs script."""
     if not stats.get("available"):
         return """
-<div class="sentiment-section">
+<div class="sentiment-section nnh-section">
   <h2 class="section-title">Net New Highs</h2>
   <div class="sentiment-card" style="max-width:480px">
     <div class="close-val">No data yet — runs after the first scan.</div>
@@ -252,7 +252,7 @@ def build_html(stats: dict) -> str:
     )
 
     return f"""
-<div class="sentiment-section">
+<div class="sentiment-section nnh-section">
   <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.25rem;">
     <h2 class="section-title" style="margin-bottom:0">Net New Highs</h2>
     <span class="overall-badge {bias_css}">{bias_label}</span>
@@ -263,20 +263,17 @@ def build_html(stats: dict) -> str:
     smoothed with a {SMA_WINDOW}-day SMA.
   </p>
 
-  <div class="sentiment-card" style="margin-bottom:1.1rem;">
+  <div class="sentiment-card nnh-card" style="margin-bottom:1.1rem;">
     <div class="sentiment-card-header">
       <span class="sentiment-index-name">Net New Highs &nbsp;
         <strong style="color:{'var(--emerald)' if net>=0 else 'var(--red)'}">{net_str}</strong>
       </span>
       <span class="overall-badge {sma_css}">10-SMA {stats['sma']:+.1f} &middot; {sma_label}</span>
     </div>
-    <div class="close-val" style="margin-bottom:.6rem;">
-      <span style="color:var(--emerald)">{stats['new_highs']} new highs</span> &nbsp;/&nbsp;
-      <span style="color:var(--red)">{stats['new_lows']} new lows</span> &nbsp;
-      of {stats['total']} stocks &nbsp;
-      <span style="color:var(--muted);font-size:.8rem;">
-        ({stats['pct_highs']}% / {stats['pct_lows']}%)
-      </span>
+    <div class="nnh-metrics">
+      <div class="nnh-metric"><span class="nnh-metric-label">New highs</span><span class="nnh-metric-value" style="color:var(--emerald)">{stats['new_highs']}</span></div>
+      <div class="nnh-metric"><span class="nnh-metric-label">New lows</span><span class="nnh-metric-value" style="color:var(--red)">{stats['new_lows']}</span></div>
+      <div class="nnh-metric"><span class="nnh-metric-label">Universe</span><span class="nnh-metric-value">{stats['total']}</span></div>
     </div>
     <div style="position:relative;height:220px;">
       <canvas id="nnhChart"></canvas>

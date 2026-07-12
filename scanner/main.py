@@ -524,24 +524,24 @@ def _update_index(
 <link href="trader-theme.css" rel="stylesheet"/>
 <style>
   :root{{
-    --bg:#fff;--surface:#fff;--surface-2:#f7f9ff;--surface2:#f7f9ff;
-    --border:#e1e7f2;--border2:#ccd7eb;--border-2:#ccd7eb;
-    --text:#14213d;--muted:#5f6f89;--subtle:#8b99af;--subtle-lt:#f3f6fb;--subtle-mid:#d6dfec;
-    --navy:#1e3a68;--navy2:#274777;--navy-2:#274777;--navy-lt:#edf4ff;--navy-mid:#bfd2ee;
-    --indigo:#5b4ddb;--indigo-lt:#f0efff;--indigo-mid:#d6d2ff;
-    --emerald:#008d6a;--emerald-lt:#e9fbf5;--emerald-mid:#9fe6d1;
-    --blue:#1674d1;--blue-lt:#eaf4ff;--blue-mid:#b9dbfb;
-    --amber:#b86a00;--amber-lt:#fff6df;--amber-mid:#f7d991;
-    --violet:#7a3fd2;--violet-lt:#f5efff;--violet-mid:#decafc;
-    --red:#d13d55;--red-lt:#fff0f2;--red-mid:#f6b6c1;
+    --bg:#ffffff;--surface:#fff;--surface-2:#fbfbfe;--surface2:#fbfbfe;
+    --border:#e5e8f0;--border2:#d4d9e8;--border-2:#d4d9e8;
+    --text:#0d1426;--muted:#5b6178;--subtle:#9499b3;--subtle-lt:#f3f4f7;--subtle-mid:#d7d9e2;
+    --navy:#0f1b3d;--navy2:#16234a;--navy-2:#16234a;--navy-lt:#eef1f8;--navy-mid:#c9d0e3;
+    --indigo:#4f46e5;--indigo-lt:#eef0fd;--indigo-mid:#c7d2fe;
+    --emerald:#059669;--emerald-lt:#ecfdf5;--emerald-mid:#a7f3d0;
+    --blue:#2563eb;--blue-lt:#eff6ff;--blue-mid:#bfdbfe;
+    --amber:#b45309;--amber-lt:#fffbeb;--amber-mid:#fde68a;
+    --violet:#7c3aed;--violet-lt:#f5f3ff;--violet-mid:#ddd6fe;
+    --red:#dc2626;--red-lt:#fef2f2;--red-mid:#fca5a5;
     --sans:'Outfit',system-ui,-apple-system,sans-serif;--mono:'DM Mono','SF Mono','Courier New',monospace;
     --radius:12px;--radius-sm:8px;--shadow-sm:0 1px 2px rgba(15,23,42,.04);--shadow-md:0 4px 16px -4px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04);
   }}
   *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0;}}
   html{{font-size:14px;-webkit-font-smoothing:antialiased;}}
-  body{{background:linear-gradient(135deg,#fff 0%,#fbfcff 55%,#f4f8ff 100%);color:var(--text);font-family:var(--sans);line-height:1.6;}}
+  body{{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;}}
   .topbar{{height:4px;background:linear-gradient(90deg,var(--emerald) 0%,var(--blue) 46%,var(--violet) 100%);}}
-  header{{background:rgba(255,255,255,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(14px);
+  header{{background:var(--surface);border-bottom:1px solid var(--border);
           padding:1.65rem 2.5rem;text-align:center;}}
   .header-row{{display:flex;align-items:center;justify-content:space-between;
               gap:1.5rem;flex-wrap:wrap;text-align:left;}}
@@ -571,7 +571,7 @@ def _update_index(
   .hub-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;}}
   .hub-card{{
     position:relative;display:flex;flex-direction:column;gap:.6rem;
-    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
     padding:1.35rem 1.4rem 1.25rem;box-shadow:var(--shadow-sm);
     text-decoration:none;color:inherit;overflow:hidden;
     transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
@@ -665,13 +665,13 @@ def _update_index(
   /* ── Market Sentiment ── */
   .sentiment-section{{max-width:1120px;margin:0 auto 2rem;padding:0 1.5rem;}}
   .sentiment-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.1rem;margin-top:.85rem;}}
-  .sentiment-card{{background:#fff;border:1px solid var(--border);border-radius:var(--radius);
-                   padding:1.3rem 1.5rem;box-shadow:0 12px 32px rgba(31,67,122,.08);}}
+  .sentiment-card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+                   padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm);}}
   .nnh-section{{margin-top:2rem;}}
   .nnh-section .section-title{{font-size:1.25rem;letter-spacing:-.025em;}}
-  .nnh-card{{border-color:#bfeadc;background:linear-gradient(135deg,#f3fffb,#fff);}}
+  .nnh-card{{border-color:var(--emerald-mid);background:linear-gradient(135deg,#f4fffb,#fff);}}
   .nnh-metrics{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin:1rem 0;}}
-  .nnh-metric{{padding:.75rem .9rem;border-radius:10px;background:#fff;border:1px solid #dcece8;}}
+  .nnh-metric{{padding:.75rem .9rem;border-radius:10px;background:#fff;border:1px solid #d9eee7;}}
   .nnh-metric-label{{display:block;color:var(--subtle);font:600 .62rem var(--mono);letter-spacing:.09em;text-transform:uppercase;}}
   .nnh-metric-value{{display:block;margin-top:.12rem;font:700 1.18rem var(--mono);}}
   .sentiment-card-header{{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}}

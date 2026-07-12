@@ -36,7 +36,8 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 def get_market_sentiment(df: pd.DataFrame | None = None) -> dict:
     """
-    Fetch NIFTY SMALLCAP 250 index historical data and compute 10-EMA.
+    Fetch the official NIFTY SMALL CAP 250 index historical data and compute
+    the 10- and 20-day EMAs.
 
     Primary source: jugaad-data (niftyindices.com) — reliable on GitHub Actions.
     Fallback:       yfinance with multiple ticker candidates.
@@ -72,8 +73,11 @@ def get_market_sentiment(df: pd.DataFrame | None = None) -> dict:
         from jugaad_data.nse import index_raw
         to_date   = dt.date.today()
         from_date = to_date - dt.timedelta(days=90)  # ~3 months for reliable EMA
+        # The NSE Indices catalogue uses "SMALL CAP" as two words.  The old
+        # "NIFTY SMALLCAP 250" lookup is not a valid record name and caused
+        # jugaad-data to return no rows, leaving the homepage at N/A.
         records   = index_raw(
-            symbol    = "NIFTY SMALLCAP 250",
+            symbol    = "NIFTY SMALL CAP 250",
             from_date = from_date,
             to_date   = to_date,
         )
@@ -95,8 +99,9 @@ def get_market_sentiment(df: pd.DataFrame | None = None) -> dict:
     # ── 2. Fallback: yfinance ─────────────────────────────────────────────────
     if close_series is None:
         import yfinance as yf
-        # Correct Yahoo Finance tickers for Nifty Smallcap 250 (try multiple)
-        candidates = ["^CNXSC", "^NSMIDCP250", "NIFTY_SMALLCAP_250.NS"]
+        # Keep Yahoo as a resilience fallback only.  ^CNXSC is Smallcap 50,
+        # not Smallcap 250, so it must never be used for this signal.
+        candidates = ["^NIFTYSC250", "NIFTY_SMALL_CAP_250.NS"]
         for ticker in candidates:
             try:
                 raw = yf.download(
